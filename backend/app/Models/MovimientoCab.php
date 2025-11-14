@@ -12,18 +12,16 @@ class MovimientoCab extends Model
     protected $table = 'movimiento_cab';
 
     protected $fillable = [
-        'numero_movimiento',
-        'tipo_movimiento',
-        'fecha_movimiento',
+        'tipo',
+        'fecha',
         'descripcion',
-        'monto_total',
         'usuario_id',
+        'documento_id',
         'estado'
     ];
 
     protected $casts = [
-        'fecha_movimiento' => 'date',
-        'monto_total' => 'decimal:2',
+        'fecha' => 'datetime',
         'estado' => 'integer'
     ];
 
@@ -64,7 +62,7 @@ class MovimientoCab extends Model
      */
     public function scopePorTipo($query, $tipo)
     {
-        return $query->where('tipo_movimiento', $tipo);
+        return $query->where('tipo', $tipo);
     }
 
     /**
@@ -72,7 +70,6 @@ class MovimientoCab extends Model
      */
     public function calcularMontoTotal()
     {
-        $this->monto_total = $this->detalles()->sum('monto');
-        $this->save();
+        return $this->detalles()->sum('monto');
     }
 }

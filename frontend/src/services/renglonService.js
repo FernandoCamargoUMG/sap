@@ -41,5 +41,19 @@ export default {
    */
   restore(id) {
     return apiClient.patch(`/renglones/${id}/restore`)
+  },
+
+  /**
+   * Obtener saldo detallado de un renglón
+   */
+  getSaldo(id) {
+    return apiClient.get(`/renglones/${id}/saldo`)
+  },
+
+  /**
+   * Obtener renglones con saldo disponible
+   */
+  getConSaldo() {
+    return apiClient.get('/renglones/con-saldo')
   }
 }

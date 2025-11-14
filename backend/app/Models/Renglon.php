@@ -27,6 +27,13 @@ class Renglon extends Model
         'estado' => 'integer'
     ];
 
+    protected $appends = [
+        'monto_asignado',
+        'monto_ejecutado', 
+        'saldo_disponible',
+        'saldo_por_ejecutar'
+    ];
+
     /**
      * Relación con presupuesto detalle
      */
@@ -68,12 +75,11 @@ class Renglon extends Model
     }
 
     /**
-     * Actualizar saldo actual (se calculará desde presupuestos_det)
-     * Este método se usará cuando se afecte el saldo desde otros módulos
+     * Actualizar saldo actual
      */
     public function actualizarSaldo($nuevoSaldo)
     {
-        $this->saldo_actual = $nuevoSaldo;
+        $this->saldo_actual = max(0, $nuevoSaldo); // No permitir saldos negativos
         $this->save();
     }
 
@@ -83,5 +89,37 @@ class Renglon extends Model
     public function tieneSaldo($monto)
     {
         return $this->saldo_actual >= $monto;
+    }
+
+    /**
+     * Obtener total asignado en presupuestos
+     */
+    public function getMontoAsignadoAttribute()
+    {
+        return $this->presupuestosDetalle()->sum('monto_asignado');
+    }
+
+    /**
+     * Obtener total ejecutado
+     */
+    public function getMontoEjecutadoAttribute()
+    {
+        return $this->presupuestosDetalle()->sum('monto_ejecutado');
+    }
+
+    /**
+     * Obtener saldo disponible (calculado)
+     */
+    public function getSaldoDisponibleAttribute()
+    {
+        return $this->monto_inicial - $this->monto_asignado;
+    }
+
+    /**
+     * Obtener saldo por ejecutar (asignado pero no ejecutado)
+     */
+    public function getSaldoPorEjecutarAttribute()
+    {
+        return $this->monto_asignado - $this->monto_ejecutado;
     }
 }

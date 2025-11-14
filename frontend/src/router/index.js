@@ -18,6 +18,7 @@ const routes = [
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true }
   },
+  // Catálogos
   {
     path: '/renglones',
     name: 'Renglones',
@@ -28,6 +29,62 @@ const routes = [
     path: '/proveedores',
     name: 'Proveedores',
     component: () => import('@/views/Proveedores.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/documentos',
+    name: 'Documentos',
+    component: () => import('@/views/Documentos.vue'),
+    meta: { requiresAuth: true }
+  },
+  // Operaciones
+  {
+    path: '/presupuestos',
+    name: 'Presupuestos',
+    component: () => import('@/views/Presupuestos.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/saldos-renglones',
+    name: 'SaldosRenglones',
+    component: () => import('@/views/SaldosRenglones.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/movimientos',
+    name: 'Movimientos',
+    component: () => import('@/views/Movimientos.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/facturas',
+    name: 'Facturas',
+    component: () => import('@/views/Facturas.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/intras',
+    name: 'Intras',
+    component: () => import('@/views/Intras.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cur',
+    name: 'CUR',
+    component: () => import('@/views/CUR.vue'),
+    meta: { requiresAuth: true }
+  },
+  // Administración
+  {
+    path: '/usuarios',
+    name: 'Usuarios',
+    component: () => import('@/views/Usuarios.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/bitacora',
+    name: 'Bitacora',
+    component: () => import('@/views/Bitacora.vue'),
     meta: { requiresAuth: true }
   }
 ]

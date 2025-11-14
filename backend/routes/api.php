@@ -65,8 +65,11 @@ Route::middleware('web')->group(function () {
 
     // Presupuestos (cabecera y detalle)
     Route::prefix('presupuestos')->group(function () {
-        Route::get('/', [PresupuestoController::class, 'index'])->name('presupuestos.index');
+        Route::get('/', [PresupuestoController::class, 'index'])->name('presupuestos.index'); // Dashboard
+        Route::get('/lista', [PresupuestoController::class, 'listarPresupuestos'])->name('presupuestos.lista'); // Lista individual
         Route::post('/', [PresupuestoController::class, 'store'])->name('presupuestos.store');
+        Route::post('/ejecutar-gasto', [PresupuestoController::class, 'ejecutarGasto'])->name('presupuestos.ejecutar-gasto');
+        Route::get('/disponibles', [PresupuestoController::class, 'getPresupuestosDisponibles'])->name('presupuestos.disponibles');
         Route::get('/deleted/list', [PresupuestoController::class, 'deleted'])->name('presupuestos.deleted');
         Route::get('/{id}', [PresupuestoController::class, 'show'])->name('presupuestos.show');
         Route::put('/{id}', [PresupuestoController::class, 'update'])->name('presupuestos.update');
@@ -136,6 +139,13 @@ Route::middleware('web')->group(function () {
         Route::put('/{id}', [DocumentoController::class, 'update'])->name('documentos.update');
         Route::delete('/{id}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');
         Route::get('/{documentableType}/{documentableId}', [DocumentoController::class, 'byEntity'])->name('documentos.byEntity');
+    });
+
+    // ========== EJECUCIÓN DE PRESUPUESTOS ==========
+    Route::prefix('ejecuciones')->group(function () {
+        Route::post('/', [\App\Http\Controllers\EjecucionController::class, 'registrarEjecucion'])->name('ejecuciones.registrar');
+        Route::get('/renglon/{renglonId}', [\App\Http\Controllers\EjecucionController::class, 'getEjecucionesPorRenglon'])->name('ejecuciones.porRenglon');
+        Route::get('/presupuestos-disponibles/{renglonId}', [\App\Http\Controllers\EjecucionController::class, 'getPresupuestosDisponibles'])->name('ejecuciones.presupuestosDisponibles');
     });
 });
 

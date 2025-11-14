@@ -13,18 +13,18 @@ class PresupuestoCab extends Model
 
     protected $fillable = [
         'anio',
+        'mes',
         'descripcion',
-        'fecha_aprobacion',
-        'monto_total',
-        'usuario_id',
+        'creado_por',
+        'fecha_creacion',
         'estado'
     ];
 
     protected $casts = [
-        'fecha_aprobacion' => 'date',
-        'monto_total' => 'decimal:2',
+        'fecha_creacion' => 'datetime',
         'estado' => 'integer',
-        'anio' => 'integer'
+        'anio' => 'integer',
+        'mes' => 'integer'
     ];
 
     /**
@@ -32,7 +32,7 @@ class PresupuestoCab extends Model
      */
     public function usuario()
     {
-        return $this->belongsTo(Usuario::class, 'usuario_id');
+        return $this->belongsTo(Usuario::class, 'creado_por');
     }
 
     /**
@@ -40,7 +40,7 @@ class PresupuestoCab extends Model
      */
     public function detalles()
     {
-        return $this->hasMany(PresupuestoDet::class, 'presupuesto_cab_id');
+        return $this->hasMany(PresupuestoDet::class, 'presupuesto_id');
     }
 
     /**
@@ -72,7 +72,6 @@ class PresupuestoCab extends Model
      */
     public function calcularMontoTotal()
     {
-        $this->monto_total = $this->detalles()->sum('monto');
-        $this->save();
+        return $this->detalles()->sum('monto_asignado');
     }
 }

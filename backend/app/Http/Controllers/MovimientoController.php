@@ -19,7 +19,7 @@ class MovimientoController extends Controller
     {
         $movimientos = MovimientoCab::with(['usuario', 'detalles.renglon'])
             ->activos()
-            ->orderBy('fecha_movimiento', 'desc')
+            ->orderBy('fecha', 'desc')
             ->get();
 
         return response()->json([
@@ -41,10 +41,9 @@ class MovimientoController extends Controller
             // Crear encabezado de movimiento
             $movimientoCab = MovimientoCab::create([
                 'usuario_id' => session('usuario_id'),
-                'tipo_movimiento' => $data['tipo_movimiento'],
-                'fecha_movimiento' => $data['fecha_movimiento'] ?? now(),
+                'tipo' => $data['tipo_movimiento'],
+                'fecha' => $data['fecha_movimiento'] ?? now(),
                 'descripcion' => $data['descripcion'] ?? null,
-                'monto_total' => $data['monto_total'],
                 'estado' => $data['estado'] ?? 1
             ]);
 
@@ -86,7 +85,7 @@ class MovimientoController extends Controller
                     $movimientoCab->id,
                     'creado',
                     session('usuario_id'),
-                    "Movimiento tipo {$movimientoCab->tipo_movimiento} creado por monto {$movimientoCab->monto_total}"
+                    "Movimiento tipo {$movimientoCab->tipo} creado"
                 );
             }
 
@@ -160,7 +159,7 @@ class MovimientoController extends Controller
             foreach ($movimientoCab->detalles as $detalle) {
                 $renglon = Renglon::find($detalle->renglon_id);
                 if ($renglon) {
-                    $this->reversarSaldoRenglon($renglon, $movimientoCab->tipo_movimiento, $detalle->monto);
+                    $this->reversarSaldoRenglon($renglon, $movimientoCab->tipo, $detalle->monto);
                 }
             }
 
@@ -176,7 +175,7 @@ class MovimientoController extends Controller
                     $movimientoCab->id,
                     'anulado',
                     session('usuario_id'),
-                    "Movimiento tipo {$movimientoCab->tipo_movimiento} anulado, saldos reversados"
+                    "Movimiento tipo {$movimientoCab->tipo} anulado, saldos reversados"
                 );
             }
 
@@ -204,7 +203,7 @@ class MovimientoController extends Controller
     {
         $movimientos = MovimientoCab::onlyTrashed()
             ->with(['usuario', 'detalles.renglon'])
-            ->orderBy('fecha_movimiento', 'desc')
+            ->orderBy('fecha', 'desc')
             ->get();
 
         return response()->json([

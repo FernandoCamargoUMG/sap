@@ -205,4 +205,57 @@ class RenglonController extends Controller
             'data' => $renglon
         ], 200);
     }
+
+    /**
+     * Obtener saldo detallado de un renglón específico
+     */
+    public function saldo($id)
+    {
+        $renglon = Renglon::with(['presupuestosDetalle.presupuestoCab'])
+            ->find($id);
+
+        if (!$renglon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Renglón no encontrado'
+            ], 404);
+        }
+
+        $saldoDetalle = [
+            'renglon' => [
+                'id' => $renglon->id,
+                'codigo' => $renglon->codigo,
+                'nombre' => $renglon->nombre,
+                'monto_inicial' => $renglon->monto_inicial,
+                'saldo_actual' => $renglon->saldo_actual
+            ],
+            'resumen' => [
+                'monto_inicial' => (float) $renglon->monto_inicial,
+                'monto_asignado' => (float) $renglon->monto_asignado,
+                'monto_ejecutado' => (float) $renglon->monto_ejecutado,
+                'saldo_disponible' => (float) $renglon->saldo_disponible,
+                'saldo_por_ejecutar' => (float) $renglon->saldo_por_ejecutar,
+                'porcentaje_asignado' => $renglon->monto_inicial > 0 ? 
+                    round(($renglon->monto_asignado / $renglon->monto_inicial) * 100, 2) : 0,
+                'porcentaje_ejecutado' => $renglon->monto_asignado > 0 ? 
+                    round(($renglon->monto_ejecutado / $renglon->monto_asignado) * 100, 2) : 0
+            ],
+            'presupuestos' => $renglon->presupuestosDetalle->map(function ($detalle) {
+                return [
+                    'presupuesto_id' => $detalle->presupuesto_id,
+                    'presupuesto_anio' => $detalle->presupuestoCab->anio ?? null,
+                    'presupuesto_mes' => $detalle->presupuestoCab->mes ?? null,
+                    'monto_asignado' => (float) $detalle->monto_asignado,
+                    'monto_ejecutado' => (float) $detalle->monto_ejecutado,
+                    'saldo_por_ejecutar' => (float) $detalle->getSaldoPorEjecutar(),
+                    'porcentaje_ejecucion' => round($detalle->getPorcentajeEjecucion(), 2)
+                ];
+            })
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $saldoDetalle
+        ], 200);
+    }
 }
