@@ -31,10 +31,8 @@ class RenglonController extends Controller
     {
         $data = $request->validated();
         
-        // Calcular saldo disponible inicial
-        $data['saldo_disponible'] = $data['monto_asignado'] - 
-            ($data['monto_comprometido'] ?? 0) - 
-            ($data['monto_ejecutado'] ?? 0);
+        // El saldo actual inicia igual al monto inicial
+        $data['saldo_actual'] = $data['monto_inicial'];
 
         $renglon = Renglon::create($data);
 
@@ -91,7 +89,9 @@ class RenglonController extends Controller
         }
 
         $renglon->update($request->validated());
-        $renglon->actualizarSaldo();
+        
+        // El saldo_actual se mantendrá o se calculará desde presupuestos_det
+        // No llamamos actualizarSaldo() aquí porque no recalculamos en cada update
 
         // Registrar en bitácora
         if (session('usuario_id')) {

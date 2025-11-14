@@ -25,10 +25,8 @@ class RenglonRequest extends FormRequest
             ],
             'nombre' => 'required|string|max:200',
             'descripcion' => 'nullable|string',
-            'monto_asignado' => 'required|numeric|min:0',
-            'monto_comprometido' => 'nullable|numeric|min:0',
-            'monto_ejecutado' => 'nullable|numeric|min:0',
-            'saldo_disponible' => 'nullable|numeric',
+            'grupo' => 'nullable|string|max:50',
+            'monto_inicial' => 'required|numeric|min:0',
             'estado' => 'required|integer|in:0,1'
         ];
     }
@@ -39,8 +37,8 @@ class RenglonRequest extends FormRequest
             'codigo.required' => 'El código del renglón es obligatorio',
             'codigo.unique' => 'El código del renglón ya está registrado',
             'nombre.required' => 'El nombre del renglón es obligatorio',
-            'monto_asignado.required' => 'El monto asignado es obligatorio',
-            'monto_asignado.min' => 'El monto asignado debe ser mayor o igual a 0',
+            'monto_inicial.required' => 'El monto inicial es obligatorio',
+            'monto_inicial.min' => 'El monto inicial debe ser mayor o igual a 0',
             'estado.required' => 'El estado es obligatorio',
             'estado.in' => 'El estado debe ser 0 o 1'
         ];

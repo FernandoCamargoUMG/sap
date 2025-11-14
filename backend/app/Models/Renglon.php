@@ -15,18 +15,15 @@ class Renglon extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'monto_asignado',
-        'monto_comprometido',
-        'monto_ejecutado',
-        'saldo_disponible',
+        'grupo',
+        'monto_inicial',
+        'saldo_actual',
         'estado'
     ];
 
     protected $casts = [
-        'monto_asignado' => 'decimal:2',
-        'monto_comprometido' => 'decimal:2',
-        'monto_ejecutado' => 'decimal:2',
-        'saldo_disponible' => 'decimal:2',
+        'monto_inicial' => 'decimal:2',
+        'saldo_actual' => 'decimal:2',
         'estado' => 'integer'
     ];
 
@@ -67,15 +64,16 @@ class Renglon extends Model
      */
     public function scopeConSaldo($query)
     {
-        return $query->where('saldo_disponible', '>', 0);
+        return $query->where('saldo_actual', '>', 0);
     }
 
     /**
-     * Calcular y actualizar saldo disponible
+     * Actualizar saldo actual (se calculará desde presupuestos_det)
+     * Este método se usará cuando se afecte el saldo desde otros módulos
      */
-    public function actualizarSaldo()
+    public function actualizarSaldo($nuevoSaldo)
     {
-        $this->saldo_disponible = $this->monto_asignado - $this->monto_comprometido - $this->monto_ejecutado;
+        $this->saldo_actual = $nuevoSaldo;
         $this->save();
     }
 
@@ -84,6 +82,6 @@ class Renglon extends Model
      */
     public function tieneSaldo($monto)
     {
-        return $this->saldo_disponible >= $monto;
+        return $this->saldo_actual >= $monto;
     }
 }

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('codigo', 20)->unique()->comment('Código o número del renglón');
             $table->string('nombre', 100);
+            $table->text('descripcion')->nullable()->comment('Descripción del renglón');
             $table->string('grupo', 50)->nullable()->comment('Clasificación del gasto');
             $table->decimal('monto_inicial', 14, 2)->default(0)->comment('Presupuesto asignado');
             $table->decimal('saldo_actual', 14, 2)->default(0)->comment('Saldo restante');

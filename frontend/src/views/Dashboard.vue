@@ -1,48 +1,9 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Navbar -->
-    <nav class="bg-gradient-cfag shadow-lg border-b-4 border-secondary-500">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-20">
-          <!-- Logo y Título -->
-          <div class="flex items-center space-x-4">
-            <div class="flex-shrink-0 flex items-center">
-              <div class="h-14 w-14 bg-white rounded-xl flex items-center justify-center shadow-lg ring-2 ring-secondary-500">
-                <svg class="h-8 w-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="ml-4">
-                <span class="text-2xl font-black text-white">SAP</span>
-                <p class="text-xs text-secondary-200">Sistema de Administración Presupuestaria</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Usuario y Logout -->
-          <div class="flex items-center space-x-4">
-            <div class="hidden md:block text-right bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-              <p class="text-sm font-bold text-white">{{ authStore.nombreUsuario }}</p>
-              <p class="text-xs text-secondary-300">{{ authStore.rolUsuario }}</p>
-            </div>
-            <button
-              @click="handleLogout"
-              class="inline-flex items-center px-4 py-2 border-2 border-white/20 text-sm font-semibold rounded-xl text-white bg-white/10 hover:bg-white hover:text-primary-600 focus:outline-none focus:ring-4 focus:ring-secondary-500 transition-all duration-200 backdrop-blur-sm"
-            >
-              <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-
+  <AppLayout>
     <!-- Contenido Principal -->
-    <main class="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <!-- Header -->
-      <div class="px-4 py-6 sm:px-0">
+      <div class="mb-8">
         <h1 class="text-4xl font-black text-gray-900 mb-2 flex items-center">
           <span class="bg-gradient-cfag bg-clip-text text-transparent">Dashboard</span>
           <svg class="h-10 w-10 ml-3 text-secondary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +32,7 @@
         </div>
 
         <!-- Card 2 -->
-        <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-2xl">
+        <div @click="$router.push('/renglones')" class="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-2xl cursor-pointer">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-green-100 text-sm font-semibold mb-1">Renglones</p>
@@ -196,18 +157,12 @@
         </div>
       </div>
     </main>
-  </div>
+  </AppLayout>
 </template>
 
 <script setup>
+import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
-const router = useRouter()
-
-const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/login')
-}
 </script>

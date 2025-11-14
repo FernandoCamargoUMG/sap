@@ -17,6 +17,18 @@ const routes = [
     name: 'Dashboard',
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/renglones',
+    name: 'Renglones',
+    component: () => import('@/views/Renglones.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/proveedores',
+    name: 'Proveedores',
+    component: () => import('@/views/Proveedores.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
