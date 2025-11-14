@@ -16,22 +16,11 @@ class Renglon extends Model
         'nombre',
         'descripcion',
         'grupo',
-        'monto_inicial',
-        'saldo_actual',
         'estado'
     ];
 
     protected $casts = [
-        'monto_inicial' => 'decimal:2',
-        'saldo_actual' => 'decimal:2',
         'estado' => 'integer'
-    ];
-
-    protected $appends = [
-        'monto_asignado',
-        'monto_ejecutado', 
-        'saldo_disponible',
-        'saldo_por_ejecutar'
     ];
 
     /**
@@ -67,59 +56,34 @@ class Renglon extends Model
     }
 
     /**
-     * Scope para renglones con saldo disponible
+     * Obtener total presupuestado para un año específico
      */
-    public function scopeConSaldo($query)
+    public function getTotalPresupuestado($anio = null)
     {
-        return $query->where('saldo_actual', '>', 0);
+        $query = $this->presupuestosDetalle();
+        
+        if ($anio) {
+            $query->whereHas('presupuestoCab', function($q) use ($anio) {
+                $q->where('anio', $anio);
+            });
+        }
+        
+        return $query->sum('monto_asignado');
     }
 
     /**
-     * Actualizar saldo actual
+     * Obtener total ejecutado para un año específico
      */
-    public function actualizarSaldo($nuevoSaldo)
+    public function getTotalEjecutado($anio = null)
     {
-        $this->saldo_actual = max(0, $nuevoSaldo); // No permitir saldos negativos
-        $this->save();
-    }
-
-    /**
-     * Verificar si hay saldo suficiente
-     */
-    public function tieneSaldo($monto)
-    {
-        return $this->saldo_actual >= $monto;
-    }
-
-    /**
-     * Obtener total asignado en presupuestos
-     */
-    public function getMontoAsignadoAttribute()
-    {
-        return $this->presupuestosDetalle()->sum('monto_asignado');
-    }
-
-    /**
-     * Obtener total ejecutado
-     */
-    public function getMontoEjecutadoAttribute()
-    {
-        return $this->presupuestosDetalle()->sum('monto_ejecutado');
-    }
-
-    /**
-     * Obtener saldo disponible (calculado)
-     */
-    public function getSaldoDisponibleAttribute()
-    {
-        return $this->monto_inicial - $this->monto_asignado;
-    }
-
-    /**
-     * Obtener saldo por ejecutar (asignado pero no ejecutado)
-     */
-    public function getSaldoPorEjecutarAttribute()
-    {
-        return $this->monto_asignado - $this->monto_ejecutado;
+        $query = $this->movimientosDetalle();
+        
+        if ($anio) {
+            $query->whereHas('movimiento', function($q) use ($anio) {
+                $q->whereYear('fecha', $anio);
+            });
+        }
+        
+        return $query->sum('monto');
     }
 }

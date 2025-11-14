@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use App\Models\Renglon;
 use App\Models\PresupuestoCab;
 use App\Models\PresupuestoDet;
+use App\Models\MovimientoCab;
+use App\Models\MovimientoDet;
 use Illuminate\Support\Facades\DB;
 
 class PresupuestoSeeder extends Seeder
@@ -19,6 +21,8 @@ class PresupuestoSeeder extends Seeder
         
         try {
             // Limpiar datos existentes de forma segura
+            MovimientoDet::query()->delete();
+            MovimientoCab::query()->delete();
             PresupuestoDet::query()->delete();
             PresupuestoCab::query()->delete();
             
@@ -32,34 +36,32 @@ class PresupuestoSeeder extends Seeder
                 'estado' => 1
             ]);
 
-            // Obtener los renglones existentes (usando los que ya tenemos)
+            // Obtener los renglones existentes (ahora son solo clasificadores)
             $renglones = Renglon::where('estado', 1)->get();
             
             if ($renglones->count() > 0) {
-                // Crear detalles de presupuesto basados en los renglones existentes
+                // Crear detalles de presupuesto con asignaciones iniciales
+                $asignaciones = [
+                    120000.00, // Sueldos y Salarios
+                    85000.00,  // Servicios Técnicos
+                    45000.00,  // Combustibles
+                    25000.00,  // Útiles de Oficina
+                    95000.00   // Equipo de Cómputo
+                ];
+                
                 foreach ($renglones as $index => $renglon) {
-                    // Asignar diferentes porcentajes del monto inicial
-                    $porcentajeAsignado = match($index) {
-                        0 => 0.8, // 80% del primer renglón
-                        1 => 0.6, // 60% del segundo renglón
-                        2 => 0.7, // 70% del tercer renglón
-                        default => 0.5 // 50% para otros renglones
-                    };
+                    $montoAsignado = $asignaciones[$index] ?? 50000.00;
                     
-                    $montoAsignado = $renglon->monto_inicial * $porcentajeAsignado;
-                    
-                    // Simular algo de ejecución (entre 0% y 30%)
-                    $porcentajeEjecutado = rand(0, 30) / 100;
-                    $montoEjecutado = $montoAsignado * $porcentajeEjecutado;
-                    
-                    PresupuestoDet::create([
+                    $presupuestoDet = PresupuestoDet::create([
                         'presupuesto_id' => $presupuesto->id,
                         'renglon_id' => $renglon->id,
-                        'monto_asignado' => round($montoAsignado, 2),
-                        'monto_ejecutado' => round($montoEjecutado, 2),
-                        'descripcion' => 'Asignación mensual ' . $renglon->nombre,
+                        'monto_asignado' => $montoAsignado,
+                        'descripcion' => 'Asignación presupuestaria ' . $renglon->nombre,
                         'estado' => 1
                     ]);
+                    
+                    // Crear algunos movimientos de ejemplo para simular ejecución
+                    $this->crearMovimientos($presupuestoDet, $index);
                 }
                 
                 echo "✅ Presupuesto creado exitosamente:\n";
@@ -83,28 +85,29 @@ class PresupuestoSeeder extends Seeder
             ]);
 
             // Agregar detalles para diciembre con diferentes asignaciones
+            $asignacionesDic = [
+                135000.00, // Sueldos y Salarios (incremento fin de año)
+                70000.00,  // Servicios Técnicos
+                40000.00,  // Combustibles
+                30000.00,  // Útiles de Oficina
+                80000.00   // Equipo de Cómputo
+            ];
+            
             foreach ($renglones as $index => $renglon) {
-                $porcentajeAsignado = match($index) {
-                    0 => 0.9, // 90% del primer renglón
-                    1 => 0.7, // 70% del segundo renglón
-                    2 => 0.8, // 80% del tercer renglón
-                    default => 0.6 // 60% para otros renglones
-                };
+                $montoAsignado = $asignacionesDic[$index] ?? 45000.00;
                 
-                $montoAsignado = $renglon->monto_inicial * $porcentajeAsignado;
-                
-                // Menos ejecución en diciembre (nuevo mes)
-                $porcentajeEjecutado = rand(0, 15) / 100;
-                $montoEjecutado = $montoAsignado * $porcentajeEjecutado;
-                
-                PresupuestoDet::create([
+                $presupuestoDet = PresupuestoDet::create([
                     'presupuesto_id' => $presupuestoDic->id,
                     'renglon_id' => $renglon->id,
-                    'monto_asignado' => round($montoAsignado, 2),
-                    'monto_ejecutado' => round($montoEjecutado, 2),
-                    'descripcion' => 'Asignación mensual ' . $renglon->nombre,
+                    'monto_asignado' => $montoAsignado,
+                    'descripcion' => 'Asignación presupuestaria ' . $renglon->nombre,
                     'estado' => 1
                 ]);
+                
+                // Menos movimientos en diciembre (mes más nuevo)
+                if ($index < 3) {
+                    $this->crearMovimientos($presupuestoDet, $index, 1);
+                }
             }
             
             echo "✅ Presupuesto adicional creado:\n";
@@ -116,6 +119,43 @@ class PresupuestoSeeder extends Seeder
         } catch (\Exception $e) {
             DB::rollback();
             echo "❌ Error al crear presupuestos: " . $e->getMessage() . "\n";
+        }
+    }
+    
+    /**
+     * Crear movimientos de ejemplo para simular ejecución
+     */
+    private function crearMovimientos(PresupuestoDet $presupuestoDet, int $index, int $cantidad = 3): void
+    {
+        $tiposMovimiento = ['ejecucion_presupuestaria', 'ajuste', 'traslado'];
+        $proveedores = ['Proveedor A', 'Proveedor B', 'Proveedor C', 'Interno'];
+        
+        for ($i = 0; $i < $cantidad; $i++) {
+            // Crear cabecera de movimiento
+            $movimientoCab = MovimientoCab::create([
+                'tipo_movimiento' => $tiposMovimiento[$i % 3],
+                'fecha' => now()->subDays(rand(5, 25)),
+                'numero_documento' => 'DOC-' . str_pad(($index * 100) + $i + 1, 6, '0', STR_PAD_LEFT),
+                'proveedor' => $proveedores[$i % 4],
+                'descripcion' => 'Movimiento de prueba ' . ($i + 1),
+                'presupuesto_cab_id' => $presupuestoDet->presupuesto_id,
+                'usuario_id' => 1,
+                'estado' => 1
+            ]);
+            
+            // Calcular monto del detalle basado en porcentaje de la asignación
+            $porcentajes = [0.15, 0.25, 0.10]; // 15%, 25%, 10%
+            $montoDetalle = $presupuestoDet->monto_asignado * $porcentajes[$i % 3];
+            
+            // Crear detalle de movimiento
+            MovimientoDet::create([
+                'movimiento_id' => $movimientoCab->id,
+                'renglon_id' => $presupuestoDet->renglon_id,
+                'presupuesto_det_id' => $presupuestoDet->id,
+                'monto' => $montoDetalle,
+                'descripcion_detalle' => 'Detalle específico del gasto - ' . $presupuestoDet->renglon->nombre,
+                'estado' => 1
+            ]);
         }
     }
 }

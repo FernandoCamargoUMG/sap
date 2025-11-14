@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\PresupuestoCab;
 use App\Models\PresupuestoDet;
 use App\Models\Renglon;
+use App\Models\MovimientoCab;
+use App\Models\MovimientoDet;
 use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +15,7 @@ class PresupuestoController extends Controller
 {
     /**
      * Dashboard principal - Vista del sistema presupuestario
+     * Nueva arquitectura: cálculos desde movimientos
      */
     public function index(Request $request)
     {
@@ -20,24 +23,31 @@ class PresupuestoController extends Controller
             $anio = $request->get('anio', date('Y'));
             $mes = $request->get('mes'); // null = anual, número = mensual específico
             
-            // Obtener todos los renglones con sus cálculos
+            // Obtener todos los renglones con sus cálculos desde la nueva arquitectura
             $renglones = Renglon::where('estado', 1)
-                ->with(['presupuestosDetalle' => function($query) use ($anio, $mes) {
-                    $query->whereHas('presupuestoCab', function($q) use ($anio, $mes) {
-                        $q->where('anio', $anio);
-                        if ($mes) {
-                            $q->where('mes', $mes);
-                        }
-                    });
-                }])
+                ->with([
+                    'presupuestosDetalle' => function($query) use ($anio, $mes) {
+                        $query->whereHas('presupuestoCab', function($q) use ($anio, $mes) {
+                            $q->where('anio', $anio);
+                            if ($mes) {
+                                $q->where('mes', $mes);
+                            }
+                        });
+                    },
+                    'presupuestosDetalle.movimientos' => function($query) {
+                        $query->with('movimiento');
+                    }
+                ])
                 ->get()
                 ->map(function($renglon) use ($anio, $mes) {
-                    // Cálculos por renglón
-                    $montoPresupuestado = $mes 
-                        ? $renglon->presupuestosDetalle->sum('monto_asignado')
-                        : $renglon->monto_inicial; // Para vista anual, usar monto inicial
+                    // Cálculos por renglón usando la nueva arquitectura
+                    $montoPresupuestado = $renglon->presupuestosDetalle->sum('monto_asignado');
                     
-                    $montoEjecutado = $renglon->presupuestosDetalle->sum('monto_ejecutado');
+                    // Calcular ejecutado desde movimientos
+                    $montoEjecutado = $renglon->presupuestosDetalle->sum(function($detalle) {
+                        return $detalle->movimientos->sum('monto');
+                    });
+                    
                     $montoPendiente = $montoPresupuestado - $montoEjecutado;
                     $variacion = $montoEjecutado - $montoPresupuestado;
                     
@@ -54,12 +64,11 @@ class PresupuestoController extends Controller
                         'descripcion' => $renglon->descripcion,
                         'grupo' => $renglon->grupo,
                         
-                        // Montos
-                        'monto_inicial' => $renglon->monto_inicial, // Presupuesto anual
-                        'monto_presupuestado' => $montoPresupuestado, // Lo planificado (mensual o anual)
-                        'monto_ejecutado' => $montoEjecutado, // Lo gastado
-                        'monto_pendiente' => $montoPendiente, // Lo que falta por ejecutar
-                        'variacion' => $variacion, // Diferencia (+ sobregiro, - ahorro)
+                        // Montos (nueva arquitectura)
+                        'monto_presupuestado' => $montoPresupuestado,
+                        'monto_ejecutado' => $montoEjecutado,
+                        'monto_pendiente' => $montoPendiente,
+                        'variacion' => $variacion,
                         
                         // Porcentajes
                         'porcentaje_ejecutado' => $porcentajeEjecutado,
@@ -412,6 +421,7 @@ class PresupuestoController extends Controller
 
     /**
      * Ejecutar gasto - Registrar una ejecución presupuestaria
+     * Nueva arquitectura: crear movimiento en lugar de actualizar monto_ejecutado
      */
     public function ejecutarGasto(Request $request)
     {
@@ -420,17 +430,29 @@ class PresupuestoController extends Controller
             'mes' => 'required|integer|min:1|max:12',
             'renglon_id' => 'required|exists:renglones,id',
             'monto' => 'required|numeric|min:0.01',
-            'descripcion' => 'required|string|max:255'
+            'descripcion' => 'required|string|max:255',
+            'numero_documento' => 'nullable|string|max:50',
+            'proveedor' => 'nullable|string|max:200'
         ]);
 
         DB::beginTransaction();
         try {
-            // Buscar el detalle del presupuesto para ese renglón y mes
-            $detalle = PresupuestoDet::whereHas('presupuestoCab', function($q) use ($request) {
-                $q->where('anio', $request->anio)->where('mes', $request->mes);
-            })
-            ->where('renglon_id', $request->renglon_id)
-            ->first();
+            // Buscar el presupuesto para ese año/mes
+            $presupuestoCab = PresupuestoCab::where('anio', $request->anio)
+                ->where('mes', $request->mes)
+                ->first();
+
+            if (!$presupuestoCab) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No existe presupuesto para ' . $this->getNombreMes($request->mes) . ' de ' . $request->anio
+                ], 422);
+            }
+
+            // Buscar el detalle del presupuesto para ese renglón
+            $detalle = PresupuestoDet::where('presupuesto_id', $presupuestoCab->id)
+                ->where('renglon_id', $request->renglon_id)
+                ->first();
 
             if (!$detalle) {
                 return response()->json([
@@ -439,7 +461,9 @@ class PresupuestoController extends Controller
                 ], 422);
             }
 
-            $saldoDisponible = $detalle->monto_asignado - $detalle->monto_ejecutado;
+            // Calcular saldo disponible desde movimientos existentes
+            $montoEjecutado = $detalle->movimientos->sum('monto');
+            $saldoDisponible = $detalle->monto_asignado - $montoEjecutado;
             
             if ($saldoDisponible < $request->monto) {
                 return response()->json([
@@ -448,19 +472,43 @@ class PresupuestoController extends Controller
                 ], 422);
             }
 
-            // Ejecutar el gasto
-            $detalle->monto_ejecutado += $request->monto;
-            $detalle->descripcion = $detalle->descripcion 
-                ? $detalle->descripcion . "\n" . $request->descripcion 
-                : $request->descripcion;
-            $detalle->save();
+            // Crear movimiento de ejecución presupuestaria
+            $movimiento = MovimientoCab::create([
+                'tipo_movimiento' => 'ejecucion_presupuestaria',
+                'fecha' => now(),
+                'descripcion' => $request->descripcion,
+                'usuario_id' => session('usuario_id', 1),
+                'presupuesto_cab_id' => $presupuestoCab->id,
+                'numero_documento' => $request->numero_documento,
+                'proveedor' => $request->proveedor,
+                'estado' => 1
+            ]);
+
+            // Crear detalle del movimiento
+            MovimientoDet::create([
+                'movimiento_id' => $movimiento->id,
+                'renglon_id' => $request->renglon_id,
+                'presupuesto_det_id' => $detalle->id,
+                'monto' => $request->monto,
+                'descripcion_detalle' => $request->descripcion,
+                'estado' => 1
+            ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Gasto ejecutado exitosamente por Q' . number_format($request->monto, 2),
-                'data' => $detalle
+                'data' => [
+                    'movimiento_id' => $movimiento->id,
+                    'presupuesto' => [
+                        'id' => $detalle->id,
+                        'renglon' => $detalle->renglon->codigo . ' - ' . $detalle->renglon->nombre,
+                        'monto_asignado' => $detalle->monto_asignado,
+                        'monto_ejecutado' => $detalle->movimientos->sum('monto') + $request->monto,
+                        'saldo_disponible' => $detalle->monto_asignado - ($detalle->movimientos->sum('monto') + $request->monto)
+                    ]
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -513,6 +561,7 @@ class PresupuestoController extends Controller
 
     /**
      * Listar todos los presupuestos individuales (no dashboard)
+     * Nueva arquitectura: cálculos desde movimientos
      */
     public function listarPresupuestos(Request $request)
     {
@@ -520,7 +569,7 @@ class PresupuestoController extends Controller
             $anio = $request->get('anio');
             $mes = $request->get('mes');
             
-            $query = PresupuestoCab::with(['detalles.renglon'])
+            $query = PresupuestoCab::with(['detalles.renglon', 'detalles.movimientos'])
                 ->where('estado', 1)
                 ->orderBy('anio', 'desc')
                 ->orderBy('mes', 'desc');
@@ -534,9 +583,14 @@ class PresupuestoController extends Controller
             }
             
             $presupuestos = $query->get()->map(function($presupuesto) {
-                // Calcular totales del presupuesto
+                // Calcular totales del presupuesto usando nueva arquitectura
                 $totalPresupuestado = $presupuesto->detalles->sum('monto_asignado');
-                $totalEjecutado = $presupuesto->detalles->sum('monto_ejecutado');
+                
+                // Calcular ejecutado desde movimientos
+                $totalEjecutado = $presupuesto->detalles->sum(function($detalle) {
+                    return $detalle->movimientos->sum('monto');
+                });
+                
                 $totalPendiente = $totalPresupuestado - $totalEjecutado;
                 $porcentajeEjecutado = $totalPresupuestado > 0 
                     ? round(($totalEjecutado / $totalPresupuestado) * 100, 2) 
@@ -557,12 +611,13 @@ class PresupuestoController extends Controller
                     'fecha_creacion' => $presupuesto->fecha_creacion,
                     'estado' => $presupuesto->estado,
                     'detalles' => $presupuesto->detalles->map(function($detalle) {
+                        $montoEjecutado = $detalle->movimientos->sum('monto');
                         return [
                             'id' => $detalle->id,
                             'renglon_id' => $detalle->renglon_id,
                             'monto_asignado' => $detalle->monto_asignado,
-                            'monto_ejecutado' => $detalle->monto_ejecutado,
-                            'saldo_disponible' => $detalle->monto_asignado - $detalle->monto_ejecutado,
+                            'monto_ejecutado' => $montoEjecutado,
+                            'saldo_disponible' => $detalle->monto_asignado - $montoEjecutado,
                             'descripcion' => $detalle->descripcion,
                             'renglon' => [
                                 'id' => $detalle->renglon->id,

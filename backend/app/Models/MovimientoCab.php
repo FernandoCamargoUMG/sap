@@ -12,11 +12,14 @@ class MovimientoCab extends Model
     protected $table = 'movimiento_cab';
 
     protected $fillable = [
-        'tipo',
+        'tipo_movimiento',
         'fecha',
         'descripcion',
         'usuario_id',
         'documento_id',
+        'presupuesto_cab_id',
+        'numero_documento',
+        'proveedor',
         'estado'
     ];
 
@@ -34,11 +37,19 @@ class MovimientoCab extends Model
     }
 
     /**
+     * Relación con presupuesto (si es ejecución presupuestaria)
+     */
+    public function presupuestoCab()
+    {
+        return $this->belongsTo(PresupuestoCab::class, 'presupuesto_cab_id');
+    }
+
+    /**
      * Relación con detalles del movimiento
      */
     public function detalles()
     {
-        return $this->hasMany(MovimientoDet::class, 'movimiento_cab_id');
+        return $this->hasMany(MovimientoDet::class, 'movimiento_id');
     }
 
     /**
@@ -62,7 +73,15 @@ class MovimientoCab extends Model
      */
     public function scopePorTipo($query, $tipo)
     {
-        return $query->where('tipo', $tipo);
+        return $query->where('tipo_movimiento', $tipo);
+    }
+
+    /**
+     * Scope para ejecuciones presupuestarias
+     */
+    public function scopeEjecucionesPresupuestarias($query)
+    {
+        return $query->where('tipo_movimiento', 'ejecucion_presupuestaria');
     }
 
     /**

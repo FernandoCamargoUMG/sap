@@ -15,7 +15,6 @@ class PresupuestoDet extends Model
         'presupuesto_id',
         'renglon_id',
         'monto_asignado',
-        'monto_ejecutado',
         'descripcion',
         'documento_id',
         'estado'
@@ -23,11 +22,11 @@ class PresupuestoDet extends Model
 
     protected $casts = [
         'monto_asignado' => 'decimal:2',
-        'monto_ejecutado' => 'decimal:2',
         'estado' => 'integer'
     ];
 
     protected $appends = [
+        'monto_ejecutado',
         'saldo_por_ejecutar',
         'porcentaje_ejecucion'
     ];
@@ -49,6 +48,14 @@ class PresupuestoDet extends Model
     }
 
     /**
+     * Relación con movimientos (ejecuciones) de este presupuesto detalle
+     */
+    public function movimientos()
+    {
+        return $this->hasMany(MovimientoDet::class, 'presupuesto_det_id');
+    }
+
+    /**
      * Scope para detalles activos
      */
     public function scopeActivos($query)
@@ -57,21 +64,11 @@ class PresupuestoDet extends Model
     }
 
     /**
-     * Ejecutar monto del presupuesto (cuando se hace un gasto)
+     * Obtener monto ejecutado (calculado desde movimientos)
      */
-    public function ejecutarMonto($monto, $descripcion = '')
+    public function getMontoEjecutadoAttribute()
     {
-        if ($this->getSaldoPorEjecutar() >= $monto) {
-            $this->monto_ejecutado += $monto;
-            if ($descripcion) {
-                $this->descripcion = $this->descripcion 
-                    ? $this->descripcion . "\n" . $descripcion 
-                    : $descripcion;
-            }
-            $this->save();
-            return true;
-        }
-        return false;
+        return $this->movimientos()->sum('monto');
     }
 
     /**
@@ -109,34 +106,5 @@ class PresupuestoDet extends Model
         return $this->porcentaje_ejecucion;
     }
 
-    /**
-     * Al crear, actualizar o eliminar, actualizar el saldo del renglón
-     */
-    protected static function booted()
-    {
-        static::created(function ($detalle) {
-            if ($detalle->renglon) {
-                // Reducir saldo disponible del renglón cuando se asigna presupuesto
-                $nuevoSaldo = $detalle->renglon->saldo_actual - $detalle->monto_asignado;
-                $detalle->renglon->actualizarSaldo($nuevoSaldo);
-            }
-        });
 
-        static::updated(function ($detalle) {
-            if ($detalle->isDirty('monto_asignado') && $detalle->renglon) {
-                // Calcular diferencia en monto asignado
-                $diferencia = $detalle->monto_asignado - $detalle->getOriginal('monto_asignado');
-                $nuevoSaldo = $detalle->renglon->saldo_actual - $diferencia;
-                $detalle->renglon->actualizarSaldo($nuevoSaldo);
-            }
-        });
-
-        static::deleted(function ($detalle) {
-            if ($detalle->renglon) {
-                // Restaurar saldo al renglón cuando se elimina la asignación
-                $nuevoSaldo = $detalle->renglon->saldo_actual + $detalle->monto_asignado;
-                $detalle->renglon->actualizarSaldo($nuevoSaldo);
-            }
-        });
-    }
 }

@@ -12,10 +12,11 @@ class MovimientoDet extends Model
     protected $table = 'movimiento_det';
 
     protected $fillable = [
-        'movimiento_cab_id',
+        'movimiento_id',
         'renglon_id',
+        'presupuesto_det_id',
         'monto',
-        'observaciones',
+        'descripcion_detalle',
         'estado'
     ];
 
@@ -27,9 +28,9 @@ class MovimientoDet extends Model
     /**
      * Relación con encabezado del movimiento
      */
-    public function movimientoCab()
+    public function movimiento()
     {
-        return $this->belongsTo(MovimientoCab::class, 'movimiento_cab_id');
+        return $this->belongsTo(MovimientoCab::class, 'movimiento_id');
     }
 
     /**
@@ -41,6 +42,14 @@ class MovimientoDet extends Model
     }
 
     /**
+     * Relación con detalle del presupuesto ejecutado
+     */
+    public function presupuestoDet()
+    {
+        return $this->belongsTo(PresupuestoDet::class, 'presupuesto_det_id');
+    }
+
+    /**
      * Scope para detalles activos
      */
     public function scopeActivos($query)
@@ -48,27 +57,5 @@ class MovimientoDet extends Model
         return $query->where('estado', 1);
     }
 
-    /**
-     * Al crear o actualizar, afectar compromisos del renglón
-     */
-    protected static function booted()
-    {
-        static::created(function ($detalle) {
-            $detalle->renglon->monto_comprometido += $detalle->monto;
-            $detalle->renglon->actualizarSaldo();
-        });
 
-        static::updated(function ($detalle) {
-            if ($detalle->isDirty('monto')) {
-                $diferencia = $detalle->monto - $detalle->getOriginal('monto');
-                $detalle->renglon->monto_comprometido += $diferencia;
-                $detalle->renglon->actualizarSaldo();
-            }
-        });
-
-        static::deleted(function ($detalle) {
-            $detalle->renglon->monto_comprometido -= $detalle->monto;
-            $detalle->renglon->actualizarSaldo();
-        });
-    }
 }

@@ -31,9 +31,6 @@ class RenglonController extends Controller
     {
         $data = $request->validated();
         
-        // El saldo actual inicia igual al monto inicial
-        $data['saldo_actual'] = $data['monto_inicial'];
-
         $renglon = Renglon::create($data);
 
         // Registrar en bitácora
@@ -89,9 +86,6 @@ class RenglonController extends Controller
         }
 
         $renglon->update($request->validated());
-        
-        // El saldo_actual se mantendrá o se calculará desde presupuestos_det
-        // No llamamos actualizarSaldo() aquí porque no recalculamos en cada update
 
         // Registrar en bitácora
         if (session('usuario_id')) {
@@ -125,11 +119,11 @@ class RenglonController extends Controller
             ], 404);
         }
 
-        // Verificar que no tenga movimientos activos
-        if ($renglon->monto_comprometido > 0 || $renglon->monto_ejecutado > 0) {
+        // Verificar que no tenga presupuestos o movimientos asociados
+        if ($renglon->presupuestosDetalle()->count() > 0 || $renglon->movimientosDetalle()->count() > 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede eliminar un renglón con movimientos activos'
+                'message' => 'No se puede eliminar un renglón que tiene presupuestos o movimientos asociados'
             ], 400);
         }
 
@@ -160,7 +154,9 @@ class RenglonController extends Controller
     public function conSaldo()
     {
         $renglones = Renglon::activos()
-            ->conSaldo()
+            ->whereHas('presupuestosDetalle', function($query) {
+                $query->whereRaw('monto_asignado > monto_ejecutado');
+            })
             ->orderBy('codigo')
             ->get();
 
@@ -226,17 +222,14 @@ class RenglonController extends Controller
                 'id' => $renglon->id,
                 'codigo' => $renglon->codigo,
                 'nombre' => $renglon->nombre,
-                'monto_inicial' => $renglon->monto_inicial,
-                'saldo_actual' => $renglon->saldo_actual
+                'grupo' => $renglon->grupo,
+                'descripcion' => $renglon->descripcion
             ],
             'resumen' => [
-                'monto_inicial' => (float) $renglon->monto_inicial,
                 'monto_asignado' => (float) $renglon->monto_asignado,
                 'monto_ejecutado' => (float) $renglon->monto_ejecutado,
                 'saldo_disponible' => (float) $renglon->saldo_disponible,
                 'saldo_por_ejecutar' => (float) $renglon->saldo_por_ejecutar,
-                'porcentaje_asignado' => $renglon->monto_inicial > 0 ? 
-                    round(($renglon->monto_asignado / $renglon->monto_inicial) * 100, 2) : 0,
                 'porcentaje_ejecutado' => $renglon->monto_asignado > 0 ? 
                     round(($renglon->monto_ejecutado / $renglon->monto_asignado) * 100, 2) : 0
             ],

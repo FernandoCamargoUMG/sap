@@ -79,13 +79,13 @@ Route::middleware('web')->group(function () {
 
     // ========== MÓDULO DE MOVIMIENTOS ==========
     
-    // Movimientos presupuestarios
+    // Movimientos presupuestarios (nueva arquitectura)
     Route::prefix('movimientos')->group(function () {
         Route::get('/', [MovimientoController::class, 'index'])->name('movimientos.index');
         Route::post('/', [MovimientoController::class, 'store'])->name('movimientos.store');
-        Route::get('/deleted/list', [MovimientoController::class, 'deleted'])->name('movimientos.deleted');
+        Route::get('/resumen', [MovimientoController::class, 'resumen'])->name('movimientos.resumen');
         Route::get('/{id}', [MovimientoController::class, 'show'])->name('movimientos.show');
-        Route::delete('/{id}', [MovimientoController::class, 'destroy'])->name('movimientos.destroy');
+        Route::put('/{id}/anular', [MovimientoController::class, 'anular'])->name('movimientos.anular');
     });
 
     // ========== MÓDULO DE PROVEEDORES ==========

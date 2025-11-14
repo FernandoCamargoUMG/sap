@@ -60,6 +60,17 @@
         </button>
       </div>
 
+      <!-- Dashboard Presupuestario -->
+      <PresupuestoDashboard 
+        v-if="dashboardData && !loading"
+        :resumen="dashboardData.resumen"
+        :renglones="dashboardData.renglones"
+        :loading="loading"
+        @crear-movimiento="openMovimientoModal({})"
+        @ver-movimientos="$router.push('/movimientos')"
+        class="mb-8"
+      />
+
       <!-- Loading -->
       <div v-if="loading" class="flex justify-center items-center py-12">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600"></div>
@@ -117,9 +128,9 @@
                 </td>
                 <td class="px-6 py-4 text-center whitespace-nowrap">
                   <div class="flex items-center justify-center space-x-1">
-                    <button @click="openEjecutarGastoModal(presupuesto)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors" title="Ejecutar Gasto">
+                    <button @click="openMovimientoModal(presupuesto)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors" title="Crear Movimiento">
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                       </svg>
                     </button>
                     <button @click="viewDetails(presupuesto)" class="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors" title="Ver detalles">
@@ -419,23 +430,43 @@
       </div>
     </div>
 
-    <!-- Modal Ejecutar Gasto -->
-    <div v-if="showEjecutarGastoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+    <!-- Modal Crear Movimiento -->
+    <div v-if="showMovimientoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-black text-gray-900">Ejecutar Gasto</h3>
-          <button @click="closeEjecutarGastoModal" class="text-gray-500 hover:text-gray-700">
+          <h3 class="text-2xl font-black text-gray-900">Crear Movimiento Presupuestario</h3>
+          <button @click="closeMovimientoModal" class="text-gray-500 hover:text-gray-700">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <form @submit.prevent="ejecutarGasto" class="space-y-6">
+        <form @submit.prevent="crearMovimiento" class="space-y-6">
+          <!-- Información del ejercicio fiscal -->
+          <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+            <div>
+              <label class="block text-sm font-bold text-gray-500 mb-1">Ejercicio Fiscal</label>
+              <p class="text-lg font-black text-primary-600">{{ movimientoForm.anio }}/{{ String(movimientoForm.mes).padStart(2, '0') }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-500 mb-1">Tipo de Movimiento</label>
+              <select
+                v-model="movimientoForm.tipo"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="gasto">Gasto</option>
+                <option value="compromiso">Compromiso</option>
+                <option value="devengado">Devengado</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-2">Renglón *</label>
             <select
-              v-model="ejecutarGastoForm.renglon_id"
+              v-model="movimientoForm.renglon_id"
               required
               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             >
@@ -446,44 +477,65 @@
             </select>
           </div>
 
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Monto a Ejecutar *</label>
-            <input
-              v-model="ejecutarGastoForm.monto"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              placeholder="0.00"
-            >
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Monto *</label>
+              <input
+                v-model="movimientoForm.monto"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Fecha *</label>
+              <input
+                v-model="movimientoForm.fecha"
+                type="date"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              >
+            </div>
           </div>
 
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-2">Descripción *</label>
             <textarea
-              v-model="ejecutarGastoForm.descripcion"
+              v-model="movimientoForm.descripcion"
               required
               rows="3"
               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              placeholder="Descripción del gasto ejecutado..."
+              placeholder="Descripción detallada del movimiento..."
             ></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">Referencia</label>
+            <input
+              v-model="movimientoForm.referencia"
+              type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              placeholder="Número de factura, orden de compra, etc."
+            >
           </div>
 
           <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
             <button
               type="button"
-              @click="closeEjecutarGastoModal"
+              @click="closeMovimientoModal"
               class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              :disabled="ejecutandoGasto"
+              :disabled="creandoMovimiento"
               class="px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
-              {{ ejecutandoGasto ? 'Ejecutando...' : 'Ejecutar Gasto' }}
+              {{ creandoMovimiento ? 'Creando...' : 'Crear Movimiento' }}
             </button>
           </div>
         </form>
@@ -495,6 +547,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import PresupuestoDashboard from '@/components/PresupuestoDashboard.vue'
 import presupuestoService from '@/services/presupuestoService'
 import renglonService from '@/services/renglonService'
 
@@ -521,16 +574,19 @@ const showDeleteModal = ref(false)
 const presupuestoToDelete = ref(null)
 const deleting = ref(false)
 
-// Estado del modal de ejecutar gasto
-const showEjecutarGastoModal = ref(false)
-const ejecutarGastoForm = ref({
+// Estado del modal de movimientos
+const showMovimientoModal = ref(false)
+const movimientoForm = ref({
   anio: null,
   mes: null,
+  tipo: 'gasto',
   renglon_id: null,
   monto: 0,
-  descripcion: ''
+  fecha: new Date().toISOString().split('T')[0],
+  descripcion: '',
+  referencia: ''
 })
-const ejecutandoGasto = ref(false)
+const creandoMovimiento = ref(false)
 
 // Formulario
 const form = ref({
@@ -578,18 +634,25 @@ onMounted(async () => {
   ])
 })
 
-// Cargar presupuestos reales de la base de datos
+// Cargar dashboard de presupuestos con cálculos dinámicos
+const dashboardData = ref(null)
+
 const loadPresupuestos = async () => {
   try {
     loading.value = true
-    const response = await presupuestoService.getAll()
     
-    // Usar solo datos reales del backend - presupuestos individuales
+    // Cargar dashboard con nueva API
+    const dashboardResponse = await presupuestoService.getDashboard()
+    if (dashboardResponse.data && dashboardResponse.data.success && dashboardResponse.data.data) {
+      dashboardData.value = dashboardResponse.data.data
+      console.log('Dashboard cargado:', dashboardData.value)
+    }
+    
+    // Cargar lista individual de presupuestos para la tabla
+    const response = await presupuestoService.getAll()
     if (response.data && response.data.success && response.data.data) {
-      // Los datos vienen como un array de presupuestos reales
       presupuestos.value = response.data.data
-      
-      console.log('Presupuestos reales cargados:', presupuestos.value)
+      console.log('Presupuestos individuales cargados:', presupuestos.value)
       
       if (presupuestos.value.length === 0) {
         showAlert('error', 'No hay presupuestos creados')
@@ -602,6 +665,7 @@ const loadPresupuestos = async () => {
     console.error('Error al cargar presupuestos:', error)
     showAlert('error', 'Error al conectar con el backend: ' + (error.response?.data?.message || error.message))
     presupuestos.value = []
+    dashboardData.value = null
   } finally {
     loading.value = false
   }
@@ -764,45 +828,68 @@ const clearFilters = () => {
   searchTerm.value = ''
 }
 
-// Abrir modal ejecutar gasto
-const openEjecutarGastoModal = (presupuesto) => {
-  // El backend espera anio y mes, no presupuesto_cab_id
-  ejecutarGastoForm.value = {
-    anio: presupuesto.anio,
-    mes: presupuesto.mes,
+// Abrir modal crear movimiento
+const openMovimientoModal = (presupuesto) => {
+  movimientoForm.value = {
+    anio: presupuesto.anio || new Date().getFullYear(),
+    mes: presupuesto.mes || new Date().getMonth() + 1,
+    tipo: 'gasto',
     renglon_id: null,
     monto: 0,
-    descripcion: ''
+    fecha: new Date().toISOString().split('T')[0],
+    descripcion: '',
+    referencia: ''
   }
-  showEjecutarGastoModal.value = true
+  showMovimientoModal.value = true
 }
 
-// Cerrar modal ejecutar gasto
-const closeEjecutarGastoModal = () => {
-  showEjecutarGastoModal.value = false
-  ejecutarGastoForm.value = {
+// Cerrar modal crear movimiento
+const closeMovimientoModal = () => {
+  showMovimientoModal.value = false
+  movimientoForm.value = {
     anio: null,
     mes: null,
+    tipo: 'gasto',
     renglon_id: null,
     monto: 0,
-    descripcion: ''
+    fecha: new Date().toISOString().split('T')[0],
+    descripcion: '',
+    referencia: ''
   }
 }
 
-// Ejecutar gasto
-const ejecutarGasto = async () => {
+// Crear movimiento
+const crearMovimiento = async () => {
   try {
-    ejecutandoGasto.value = true
-    await presupuestoService.ejecutarGasto(ejecutarGastoForm.value)
-    showAlert('success', 'Gasto ejecutado correctamente')
-    closeEjecutarGastoModal()
+    creandoMovimiento.value = true
+    
+    // Importar el servicio de movimientos
+    const movimientoService = (await import('@/services/movimientoService')).default
+    
+    const movimientoData = {
+      anio: movimientoForm.value.anio,
+      mes: movimientoForm.value.mes,
+      tipo: movimientoForm.value.tipo,
+      descripcion: movimientoForm.value.descripcion,
+      referencia: movimientoForm.value.referencia,
+      fecha: movimientoForm.value.fecha,
+      renglones: [{
+        renglon_id: movimientoForm.value.renglon_id,
+        monto: movimientoForm.value.monto,
+        descripcion: movimientoForm.value.descripcion
+      }]
+    }
+    
+    await movimientoService.create(movimientoData)
+    showAlert('success', 'Movimiento creado correctamente')
+    closeMovimientoModal()
     await loadPresupuestos()
   } catch (error) {
-    console.error('Error al ejecutar gasto:', error)
-    const message = error.response?.data?.message || 'Error al ejecutar gasto'
+    console.error('Error al crear movimiento:', error)
+    const message = error.response?.data?.message || 'Error al crear movimiento'
     showAlert('error', message)
   } finally {
-    ejecutandoGasto.value = false
+    creandoMovimiento.value = false
   }
 }
 
