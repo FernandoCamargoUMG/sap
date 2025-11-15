@@ -98,5 +98,48 @@ export default {
         { id: 'App\\Models\\Renglon', nombre: 'Renglones' }
       ]
     }
+  },
+
+  /**
+   * Validar archivo PDF
+   */
+  validatePDF(file) {
+    const errors = []
+    
+    // Validar tipo de archivo
+    if (file.type !== 'application/pdf') {
+      errors.push('El archivo debe ser un PDF')
+    }
+    
+    // Validar tamaño (10MB máximo)
+    const maxSize = 10 * 1024 * 1024 // 10MB en bytes
+    if (file.size > maxSize) {
+      errors.push('El archivo no puede ser mayor a 10MB')
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    }
+  },
+
+  /**
+   * Formatear tamaño de archivo
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes'
+    
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  },
+
+  /**
+   * Obtener URL de descarga
+   */
+  getDownloadUrl(documento) {
+    return documento.url_descarga || `${apiClient.defaults.baseURL}/documentos/${documento.id}/download`
   }
 }

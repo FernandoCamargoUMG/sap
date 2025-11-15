@@ -40,45 +40,66 @@ class DocumentoController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'documentable_type' => 'required|string|max:50',
-            'documentable_id' => 'required|integer',
-            'nombre_archivo' => 'required|string|max:255',
-            'ruta_archivo' => 'required|string|max:500',
-            'tipo_archivo' => 'nullable|string|max:100',
-            'tamanio' => 'nullable|integer',
-            'descripcion' => 'nullable|string',
-            'estado' => 'nullable|integer|in:0,1'
-        ]);
+        try {
+            $validated = $request->validate([
+                'archivo' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+                'documentable_type' => 'required|string|max:50',
+                'documentable_id' => 'required|integer',
+                'descripcion' => 'nullable|string|max:500',
+                'usuario_id' => 'required|integer'
+            ]);
 
-        $documento = Documento::create([
-            'documentable_type' => $validated['documentable_type'],
-            'documentable_id' => $validated['documentable_id'],
-            'usuario_id' => session('usuario_id'),
-            'nombre_archivo' => $validated['nombre_archivo'],
-            'ruta_archivo' => $validated['ruta_archivo'],
-            'tipo_archivo' => $validated['tipo_archivo'] ?? null,
-            'tamanio' => $validated['tamanio'] ?? null,
-            'descripcion' => $validated['descripcion'] ?? null,
-            'estado' => $validated['estado'] ?? 1
-        ]);
+            $archivo = $request->file('archivo');
+            
+            // Generar nombre único para el archivo
+            $nombreOriginal = $archivo->getClientOriginalName();
+            $extension = $archivo->getClientOriginalExtension();
+            $nombreUnico = uniqid() . '_' . time() . '.' . $extension;
+            
+            // Definir la carpeta según el tipo de documento
+            $carpeta = $this->getCarpetaPorTipo($validated['documentable_type']);
+            $rutaCompleta = $carpeta . '/' . $nombreUnico;
+            
+            // Subir archivo
+            $rutaArchivo = $archivo->storeAs('public/' . $rutaCompleta);
+            
+            // Crear registro en base de datos
+            $documento = Documento::create([
+                'documentable_type' => $validated['documentable_type'],
+                'documentable_id' => $validated['documentable_id'],
+                'usuario_id' => $validated['usuario_id'],
+                'nombre_archivo' => $nombreOriginal,
+                'ruta_archivo' => $rutaCompleta,
+                'tipo_archivo' => $extension,
+                'tamanio' => $archivo->getSize(),
+                'descripcion' => $validated['descripcion'] ?? null,
+                'estado' => 1
+            ]);
 
-        // Registrar en bitácora
-        if (session('usuario_id')) {
+            // Registrar en bitácora
             Bitacora::registrar(
                 'documentos',
                 $documento->id,
                 'creado',
-                session('usuario_id'),
+                $validated['usuario_id'],
                 "Documento {$documento->nombre_archivo} subido para {$documento->documentable_type}:{$documento->documentable_id}"
             );
-        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Documento subido exitosamente',
-            'data' => $documento->load('usuario')
-        ], 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento subido exitosamente',
+                'data' => [
+                    'documento' => $documento->load('usuario'),
+                    'url_descarga' => Storage::url($rutaArchivo)
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir documento: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -213,9 +234,38 @@ class DocumentoController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Agregar URL de descarga a cada documento
+        $documentos->map(function ($documento) {
+            if ($documento->ruta_archivo) {
+                $documento->url_descarga = Storage::url('public/' . $documento->ruta_archivo);
+            }
+            return $documento;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $documentos
         ], 200);
+    }
+
+    /**
+     * Obtener carpeta por tipo de entidad
+     */
+    private function getCarpetaPorTipo($tipo)
+    {
+        switch ($tipo) {
+            case 'App\\Models\\PresupuestoCab':
+                return 'documentos/presupuestos';
+            case 'App\\Models\\MovimientoCab':
+                return 'documentos/movimientos';
+            case 'App\\Models\\FacturaCab':
+                return 'documentos/facturas';
+            case 'App\\Models\\Intra':
+                return 'documentos/intras';
+            case 'App\\Models\\Cur':
+                return 'documentos/cur';
+            default:
+                return 'documentos/otros';
+        }
     }
 }

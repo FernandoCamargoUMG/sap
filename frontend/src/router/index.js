@@ -18,6 +18,12 @@ const routes = [
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/dashboard-presupuestario',
+    name: 'PresupuestoDashboard',
+    component: () => import('@/views/PresupuestoDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
   // Catálogos
   {
     path: '/renglones',

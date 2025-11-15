@@ -64,7 +64,7 @@
         </div>
 
         <!-- Card 4 -->
-        <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-2xl">
+        <!--<div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-2xl">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-purple-100 text-sm font-semibold mb-1">Movimientos</p>
@@ -77,7 +77,7 @@
               </svg>
             </div>
           </div>
-        </div>
+        </div>-->
       </div>
 
       <!-- Card de Bienvenida -->
