@@ -19,6 +19,16 @@ export default {
    * Crear nuevo compromiso de pago
    */
   create(data) {
+    // Si es FormData (contiene archivos), usar Content-Type multipart
+    if (data instanceof FormData) {
+      return apiClient.post('/cur', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    }
+    
+    // Si es objeto normal, usar JSON
     return apiClient.post('/cur', data)
   },
 
@@ -55,5 +65,34 @@ export default {
    */
   getByRenglon(renglonId) {
     return apiClient.get(`/cur?renglon_id=${renglonId}`)
+  },
+
+  /**
+   * Agregar documentos a un CUR existente
+   */
+  addDocuments(curId, formData) {
+    return apiClient.post(`/cur/${curId}/documentos`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+
+  /**
+   * Subir o actualizar documento de un CUR
+   */
+  uploadDocument(curId, formData) {
+    return apiClient.post(`/cur/${curId}/documento`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+
+  /**
+   * Eliminar documento de un CUR
+   */
+  deleteDocument(curId) {
+    return apiClient.delete(`/cur/${curId}/documento`)
   }
 }

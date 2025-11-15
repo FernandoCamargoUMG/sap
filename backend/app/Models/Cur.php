@@ -19,7 +19,8 @@ class Cur extends Model
         'descripcion',
         'proveedor_id',
         'usuario_id',
-        'estado'
+        'estado',
+        'documento_id'
     ];
 
     protected $casts = [
@@ -53,6 +54,14 @@ class Cur extends Model
     }
 
     /**
+     * Relación con documento único (como facturas)
+     */
+    public function documento()
+    {
+        return $this->belongsTo(Documento::class, 'documento_id');
+    }
+
+    /**
      * Relación polimórfica con documentos
      */
     public function documentos()
@@ -70,7 +79,9 @@ class Cur extends Model
 
     /**
      * Al crear, comprometer el monto en el renglón
+     * DESHABILITADO: No se calculan saldos automáticamente
      */
+    /*
     protected static function booted()
     {
         static::created(function ($cur) {
@@ -91,4 +102,5 @@ class Cur extends Model
             $cur->renglon->actualizarSaldo();
         });
     }
+    */
 }

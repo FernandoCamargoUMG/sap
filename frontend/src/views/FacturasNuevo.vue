@@ -9,13 +9,22 @@
           </h1>
           <p class="text-gray-600 mt-2">Administra facturas con documentos PDF adjuntos</p>
         </div>
-        <button @click="abrirModalCrear"
-          class="bg-gradient-cfag text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center">
-          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Nueva Factura
-        </button>
+        <div class="flex space-x-4">
+          <button @click="abrirModalReportes"
+            class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center">
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Reportes
+          </button>
+          <button @click="abrirModalCrear"
+            class="bg-gradient-cfag text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center">
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva Factura
+          </button>
+        </div>
       </div>
 
       <!-- Filtros -->
@@ -487,6 +496,103 @@
         </div>
       </div>
 
+      <!-- Modal de Reportes -->
+      <div v-if="modalReportesAbierto" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto border border-gray-200">
+          <div class="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 rounded-t-2xl">
+            <div class="flex justify-between items-center">
+              <h2 class="text-2xl font-bold text-gray-900">Generar Reportes de Facturas</h2>
+              <button @click="cerrarModalReportes"
+                class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-8">
+            <!-- Filtros de fecha -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros de Fecha</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+                  <input type="date" v-model="filtroReporte.fechaInicio" 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+                  <input type="date" v-model="filtroReporte.fechaFin" 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+              </div>
+              <div class="mt-4 flex justify-end">
+                <button @click="cargarFacturasParaReporte" :disabled="loadingReporte"
+                  class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-all duration-200 flex items-center">
+                  <svg v-if="!loadingReporte" class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <svg v-else class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ loadingReporte ? 'Cargando...' : 'Actualizar Datos' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Tipo de reporte -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Tipo de Reporte</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200">
+                  <input type="radio" v-model="filtroReporte.tipoReporte" value="resumen" id="resumen"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                  <label for="resumen" class="ml-3 text-sm font-medium text-gray-700">Resumen de Facturas</label>
+                </div>
+                <div class="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200">
+                  <input type="radio" v-model="filtroReporte.tipoReporte" value="detallado" id="detallado"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                  <label for="detallado" class="ml-3 text-sm font-medium text-gray-700">Reporte Detallado</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vista previa de datos -->
+            <div v-if="facturasParaReporte.length > 0" class="mb-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Vista Previa</h3>
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-sm text-gray-600">Se encontraron <strong>{{ facturasParaReporte.length }}</strong> facturas en el rango seleccionado</p>
+                <p class="text-sm text-gray-600 mt-1">Total: <strong>Q{{ totalFacturasFiltradas.toFixed(2) }}</strong></p>
+              </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+              <button @click="cerrarModalReportes"
+                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-200">
+                Cancelar
+              </button>
+              <button @click="generarReportePDF" :disabled="facturasParaReporte.length === 0"
+                class="px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 flex items-center">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generar PDF
+              </button>
+              <button @click="generarReporteExcel" :disabled="facturasParaReporte.length === 0"
+                class="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 flex items-center">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generar Excel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal de Crear/Editar -->
       <div v-if="mostrarModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-y-auto">
@@ -770,6 +876,7 @@ const paginacion = ref({})
 // Modales
 const mostrarModal = ref(false)
 const mostrarModalDetalle = ref(false)
+const modalReportesAbierto = ref(false)
 const modoEdicion = ref(false)
 const facturaDetalle = ref(null)
 
@@ -781,6 +888,13 @@ const filtros = ref({
   fecha_hasta: '',
   folio: '',
   per_page: 25
+})
+
+// Filtros para reportes
+const filtroReporte = ref({
+  fechaInicio: '',
+  fechaFin: '',
+  tipoReporte: 'resumen'
 })
 
 // Formulario
@@ -811,6 +925,21 @@ const facturasFiltradas = computed(() => {
 const totalFactura = computed(() => {
   return formulario.value.detalles.reduce((total, detalle) => {
     return total + (detalle.subtotal || 0)
+  }, 0)
+})
+
+// Estado para reportes
+const facturasReporte = ref([])
+const loadingReporte = ref(false)
+
+// Computadas para reportes
+const facturasParaReporte = computed(() => {
+  return facturasReporte.value
+})
+
+const totalFacturasFiltradas = computed(() => {
+  return facturasParaReporte.value.reduce((total, factura) => {
+    return total + parseFloat(factura.total || 0)
   }, 0)
 })
 
@@ -1120,6 +1249,249 @@ const getTipoClasses = (tipo) => {
     despensa: 'bg-gradient-to-r from-purple-100 to-violet-100 text-purple-800 border-purple-200'
   }
   return clases[tipo] || 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-800 border-gray-200'
+}
+
+// Funciones del modal de reportes
+const abrirModalReportes = async () => {
+  // Configurar fechas por defecto (desde el 1 de enero del año actual hasta hoy)
+  const hoy = new Date()
+  const primeroEnero = new Date(hoy.getFullYear(), 0, 1) // 1 de enero del año actual
+  
+  filtroReporte.value.fechaInicio = primeroEnero.toISOString().split('T')[0]
+  filtroReporte.value.fechaFin = hoy.toISOString().split('T')[0]
+  filtroReporte.value.tipoReporte = 'resumen'
+  
+  modalReportesAbierto.value = true
+  
+  // Cargar datos iniciales
+  await cargarFacturasParaReporte()
+}
+
+const cerrarModalReportes = () => {
+  modalReportesAbierto.value = false
+  filtroReporte.value = {
+    fechaInicio: '',
+    fechaFin: '',
+    tipoReporte: 'resumen'
+  }
+  facturasReporte.value = []
+}
+
+const cargarFacturasParaReporte = async () => {
+  try {
+    loadingReporte.value = true
+    
+    const filtros = {
+      fecha_inicio: filtroReporte.value.fechaInicio,
+      fecha_fin: filtroReporte.value.fechaFin
+    }
+    
+    const response = await facturaService.getFacturasParaReporte(filtros)
+    if (response.success) {
+      facturasReporte.value = response.data
+    }
+  } catch (error) {
+    console.error('Error al cargar facturas para reporte:', error)
+    mostrarAlerta('error', 'Error al cargar las facturas para el reporte')
+  } finally {
+    loadingReporte.value = false
+  }
+}
+
+const generarReportePDF = async () => {
+  try {
+    loading.value = true
+    
+    // Importar jsPDF dinámicamente
+    const { jsPDF } = await import('jspdf')
+    await import('jspdf-autotable')
+    
+    const doc = new jsPDF()
+    
+    // Configurar título
+    doc.setFontSize(18)
+    doc.text('Reporte de Facturas', 20, 20)
+    
+    // Información del reporte
+    doc.setFontSize(12)
+    const fechaInicio = filtroReporte.value.fechaInicio || 'No especificada'
+    const fechaFin = filtroReporte.value.fechaFin || 'No especificada'
+    doc.text(`Período: ${fechaInicio} - ${fechaFin}`, 20, 35)
+    doc.text(`Tipo: ${filtroReporte.value.tipoReporte === 'resumen' ? 'Resumen' : 'Detallado'}`, 20, 45)
+    doc.text(`Total de facturas: ${facturasParaReporte.value.length}`, 20, 55)
+    doc.text(`Total general: Q${totalFacturasFiltradas.value.toFixed(2)}`, 20, 65)
+    
+    if (filtroReporte.value.tipoReporte === 'resumen') {
+      // Reporte resumen - solo encabezados
+      const columns = ['Folio', 'Proveedor', 'Fecha', 'Tipo', 'Total']
+      const rows = facturasParaReporte.value.map(factura => [
+        factura.folio,
+        factura.proveedor?.nombre || 'N/A',
+        formatDate(factura.fecha),
+        getTipoLabel(factura.tipo),
+        `Q${parseFloat(factura.total || 0).toFixed(2)}`
+      ])
+      
+      doc.autoTable({
+        head: [columns],
+        body: rows,
+        startY: 75,
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [59, 130, 246] }
+      })
+    } else {
+      // Reporte detallado - con detalles de cada factura
+      let currentY = 75
+      
+      for (const factura of facturasParaReporte.value) {
+        // Título de la factura
+        doc.setFontSize(14)
+        doc.text(`Factura ${factura.folio}`, 20, currentY)
+        currentY += 10
+        
+        // Información del encabezado
+        doc.setFontSize(10)
+        doc.text(`Proveedor: ${factura.proveedor?.nombre || 'N/A'}`, 20, currentY)
+        doc.text(`Fecha: ${formatDate(factura.fecha)}`, 120, currentY)
+        currentY += 10
+        doc.text(`Tipo: ${getTipoLabel(factura.tipo)}`, 20, currentY)
+        doc.text(`Total: Q${parseFloat(factura.total || 0).toFixed(2)}`, 120, currentY)
+        currentY += 15
+        
+        // Tabla de detalles si existen
+        if (factura.detalles && factura.detalles.length > 0) {
+          const detailColumns = ['Renglón', 'Item', 'Cantidad', 'P. Unit.', 'Subtotal']
+          const detailRows = factura.detalles.map(detalle => [
+            detalle.renglon?.nombre || 'N/A',
+            detalle.item,
+            detalle.cantidad.toString(),
+            `Q${parseFloat(detalle.precio_unitario || 0).toFixed(2)}`,
+            `Q${parseFloat(detalle.subtotal || 0).toFixed(2)}`
+          ])
+          
+          doc.autoTable({
+            head: [detailColumns],
+            body: detailRows,
+            startY: currentY,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [34, 197, 94] },
+            margin: { left: 20, right: 20 }
+          })
+          
+          currentY = doc.lastAutoTable.finalY + 20
+        } else {
+          currentY += 10
+        }
+        
+        // Nueva página si es necesario
+        if (currentY > 250) {
+          doc.addPage()
+          currentY = 20
+        }
+      }
+    }
+    
+    // Guardar el PDF
+    const fileName = `reporte_facturas_${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
+    
+    mostrarAlerta('success', 'Reporte PDF generado exitosamente')
+    
+  } catch (error) {
+    console.error('Error generando PDF:', error)
+    mostrarAlerta('error', 'Error al generar el reporte PDF')
+  } finally {
+    loading.value = false
+  }
+}
+
+const generarReporteExcel = async () => {
+  try {
+    loading.value = true
+    
+    // Importar XLSX dinámicamente
+    const XLSX = await import('xlsx')
+    
+    const workbook = XLSX.utils.book_new()
+    
+    if (filtroReporte.value.tipoReporte === 'resumen') {
+      // Hoja de resumen
+      const resumenData = [
+        ['Reporte de Facturas - Resumen'],
+        [`Período: ${filtroReporte.value.fechaInicio || 'No especificada'} - ${filtroReporte.value.fechaFin || 'No especificada'}`],
+        [`Total de facturas: ${facturasParaReporte.value.length}`],
+        [`Total general: Q${totalFacturasFiltradas.value.toFixed(2)}`],
+        [], // Fila vacía
+        ['Folio', 'Proveedor', 'Fecha', 'Tipo', 'Total'],
+        ...facturasParaReporte.value.map(factura => [
+          factura.folio,
+          factura.proveedor?.nombre || 'N/A',
+          formatDate(factura.fecha),
+          getTipoLabel(factura.tipo),
+          parseFloat(factura.total || 0)
+        ])
+      ]
+      
+      const worksheet = XLSX.utils.aoa_to_sheet(resumenData)
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Resumen')
+      
+    } else {
+      // Hoja de encabezados
+      const encabezadosData = [
+        ['Reporte de Facturas - Encabezados'],
+        [`Período: ${filtroReporte.value.fechaInicio || 'No especificada'} - ${filtroReporte.value.fechaFin || 'No especificada'}`],
+        [], // Fila vacía
+        ['Folio', 'Proveedor', 'Fecha', 'Tipo', 'Total'],
+        ...facturasParaReporte.value.map(factura => [
+          factura.folio,
+          factura.proveedor?.nombre || 'N/A',
+          formatDate(factura.fecha),
+          getTipoLabel(factura.tipo),
+          parseFloat(factura.total || 0)
+        ])
+      ]
+      
+      const worksheetEncabezados = XLSX.utils.aoa_to_sheet(encabezadosData)
+      XLSX.utils.book_append_sheet(workbook, worksheetEncabezados, 'Encabezados')
+      
+      // Hoja de detalles
+      const detallesData = [
+        ['Reporte de Facturas - Detalles'],
+        [],
+        ['Folio Factura', 'Renglón', 'Item', 'Cantidad', 'Precio Unitario', 'Subtotal']
+      ]
+      
+      facturasParaReporte.value.forEach(factura => {
+        if (factura.detalles && factura.detalles.length > 0) {
+          factura.detalles.forEach(detalle => {
+            detallesData.push([
+              factura.folio,
+              detalle.renglon?.nombre || 'N/A',
+              detalle.item,
+              detalle.cantidad,
+              parseFloat(detalle.precio_unitario || 0),
+              parseFloat(detalle.subtotal || 0)
+            ])
+          })
+        }
+      })
+      
+      const worksheetDetalles = XLSX.utils.aoa_to_sheet(detallesData)
+      XLSX.utils.book_append_sheet(workbook, worksheetDetalles, 'Detalles')
+    }
+    
+    // Guardar el archivo Excel
+    const fileName = `reporte_facturas_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+    
+    mostrarAlerta('success', 'Reporte Excel generado exitosamente')
+    
+  } catch (error) {
+    console.error('Error generando Excel:', error)
+    mostrarAlerta('error', 'Error al generar el reporte Excel')
+  } finally {
+    loading.value = false
+  }
 }
 
 // Lifecycle

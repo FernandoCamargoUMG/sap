@@ -181,7 +181,27 @@ const facturaService = {
   // Formatear fecha
   formatDate(date) {
     if (!date) return ''
-    return new Date(date).toLocaleDateString('es-GT')
+    
+    // Asegurar que la fecha se interprete correctamente
+    let dateObj
+    if (typeof date === 'string') {
+      // Si viene como string (ejemplo: "2025-11-15"), crear fecha sin conversión de zona horaria
+      if (date.includes('T')) {
+        // Si tiene tiempo, usar la fecha directamente
+        dateObj = new Date(date)
+      } else {
+        // Si es solo fecha (YYYY-MM-DD), agregar tiempo local para evitar problemas de zona horaria
+        dateObj = new Date(date + 'T00:00:00')
+      }
+    } else {
+      dateObj = new Date(date)
+    }
+    
+    return dateObj.toLocaleDateString('es-GT', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
   },
 
   // Eliminar documento de factura
@@ -191,6 +211,25 @@ const facturaService = {
       return response.data
     } catch (error) {
       console.error('Error al eliminar documento:', error)
+      throw error
+    }
+  },
+
+  // Obtener facturas con detalles para reportes
+  async getFacturasParaReporte(filtros = {}) {
+    try {
+      const params = new URLSearchParams()
+      
+      Object.keys(filtros).forEach(key => {
+        if (filtros[key] !== '' && filtros[key] !== null && filtros[key] !== undefined) {
+          params.append(key, filtros[key])
+        }
+      })
+      
+      const response = await axios.get(`${API_URL}/facturas/reportes?${params.toString()}`)
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener facturas para reporte:', error)
       throw error
     }
   },

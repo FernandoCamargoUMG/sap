@@ -28,6 +28,25 @@ class FacturaCab extends Model
     ];
 
     /**
+     * Accessor para fecha - asegurar formato correcto
+     */
+    public function getFechaAttribute($value)
+    {
+        if (!$value) return null;
+        return \Carbon\Carbon::parse($value)->format('Y-m-d');
+    }
+
+    /**
+     * Mutator para fecha - normalizar entrada
+     */
+    public function setFechaAttribute($value)
+    {
+        if ($value) {
+            $this->attributes['fecha'] = \Carbon\Carbon::parse($value)->format('Y-m-d');
+        }
+    }
+
+    /**
      * Relación con proveedor
      */
     public function proveedor()

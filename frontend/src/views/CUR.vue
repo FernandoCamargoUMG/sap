@@ -117,13 +117,26 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-bold text-gray-900">{{ cur.descripcion }}</div>
-                                    <div v-if="cur.numero_documento" class="text-xs text-gray-500">
-                                        Doc: {{ cur.numero_documento }}
+                                    <div v-if="cur.documentos && cur.documentos.length > 0" class="flex items-center mt-2">
+                                        <svg class="h-4 w-4 text-red-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span class="text-xs text-gray-600 font-medium">
+                                            {{ cur.documentos.length }} documento{{ cur.documentos.length === 1 ? '' : 's' }}
+                                        </span>
+                                    </div>
+                                    <div v-else-if="cur.documento" class="flex items-center mt-2">
+                                        <svg class="h-4 w-4 text-red-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span class="text-xs text-gray-600 font-medium">PDF adjunto</span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center whitespace-nowrap">
                                     <span class="text-lg font-black text-orange-600">Q{{
-                                        formatMoney(cur.monto_comprometido) }}</span>
+                                        formatMoney(cur.monto) }}</span>
                                 </td>
                                 <td class="px-6 py-4 text-center whitespace-nowrap">
                                     <span :class="[
@@ -196,8 +209,8 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-2">Número de Documento</label>
-                            <input v-model="form.numero_documento" type="text"
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Número CUR</label>
+                            <input v-model="form.numero_cur" type="text"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
                                 placeholder="Ej: CUR-001-2025">
                         </div>
@@ -228,7 +241,7 @@
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Monto del Compromiso *</label>
-                        <input v-model="form.monto_comprometido" type="number" step="0.01" min="0" required
+                        <input v-model="form.monto" type="number" step="0.01" min="0" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
                             placeholder="0.00">
                     </div>
@@ -238,6 +251,19 @@
                         <textarea v-model="form.descripcion" required rows="3"
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
                             placeholder="Descripción del compromiso..."></textarea>
+                    </div>
+
+                    <!-- Documento PDF (igual que facturas) -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Documento PDF</label>
+                        <input @change="onFileChange" type="file" accept=".pdf" ref="fileInput"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                        <p class="text-xs text-gray-500 mt-1">Opcional. Máximo 10MB. Solo archivos PDF.</p>
+                        <div v-if="fileErrors.length > 0" class="mt-2">
+                            <div v-for="error in fileErrors" :key="error" class="text-red-600 text-xs">
+                                {{ error }}
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
@@ -253,6 +279,197 @@
                 </form>
             </div>
         </div>
+
+        <!-- Modal Detalles -->
+        <div v-if="showDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-black text-gray-900">Detalles del Compromiso (CUR)</h3>
+                    <button @click="showDetailsModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div v-if="selectedCur" class="space-y-6">
+                    <!-- Información básica -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Información Básica</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Número CUR:</label>
+                                <p class="text-lg font-black text-blue-600">{{ selectedCur.numero_cur }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Fecha de Compromiso:</label>
+                                <p class="text-lg">{{ formatDate(selectedCur.fecha_compromiso) }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Monto:</label>
+                                <p class="text-2xl font-black text-orange-600">Q{{ formatMoney(selectedCur.monto) }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Estado:</label>
+                                <span :class="[
+                                    'px-3 py-1 rounded-full text-sm font-bold',
+                                    selectedCur.estado === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                ]">
+                                    {{ selectedCur.estado === 1 ? 'Activo' : 'Anulado' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del proveedor -->
+                    <div class="bg-blue-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Información del Proveedor</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Nombre:</label>
+                                <p class="text-lg font-semibold text-blue-800">{{ selectedCur.proveedor?.nombre || 'No disponible' }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">NIT:</label>
+                                <p class="text-lg font-mono">{{ selectedCur.proveedor?.nit || 'No disponible' }}</p>
+                            </div>
+                            <div v-if="selectedCur.proveedor?.direccion">
+                                <label class="block text-sm font-bold text-gray-700">Dirección:</label>
+                                <p class="text-lg">{{ selectedCur.proveedor.direccion }}</p>
+                            </div>
+                            <div v-if="selectedCur.proveedor?.telefono">
+                                <label class="block text-sm font-bold text-gray-700">Teléfono:</label>
+                                <p class="text-lg">{{ selectedCur.proveedor.telefono }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del renglón -->
+                    <div class="bg-green-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Información del Renglón</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Código:</label>
+                                <p class="text-lg font-mono font-bold text-green-800">{{ selectedCur.renglon?.codigo || 'No disponible' }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700">Nombre:</label>
+                                <p class="text-lg">{{ selectedCur.renglon?.nombre || 'No disponible' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="bg-orange-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Descripción del Compromiso</h4>
+                        <p class="text-lg leading-relaxed">{{ selectedCur.descripcion }}</p>
+                    </div>
+
+                    <!-- Usuario que registró -->
+                    <div v-if="selectedCur.usuario" class="bg-purple-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Registrado por</h4>
+                        <p class="text-lg font-semibold">{{ selectedCur.usuario.nombre || selectedCur.usuario.name || 'Usuario' }}</p>
+                    </div>
+
+                    <!-- Gestión de documentos -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h4 class="text-lg font-bold text-gray-900 mb-4">Documentos</h4>
+                        
+                        <!-- Lista de documentos existentes -->
+                        <div v-if="selectedCur.documentos && selectedCur.documentos.length > 0" class="mb-4 space-y-3">
+                            <div v-for="documento in selectedCur.documentos" :key="documento.id" 
+                                 class="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                                <div class="flex items-center flex-1">
+                                    <svg class="h-8 w-8 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <div>
+                                        <p class="font-semibold text-gray-900">{{ documento.nombre_archivo }}</p>
+                                        <p class="text-sm text-gray-500">{{ formatFileSize(documento.tamanio) }}</p>
+                                        <p class="text-xs text-gray-400">Subido por: {{ documento.usuario?.nombre || documento.usuario?.name || 'Usuario' }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button 
+                                        @click="downloadSpecificDocument(documento)"
+                                        class="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                        title="Descargar"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M12 10v6m0 0l-3-3m3 3l3-3m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                    <button 
+                                        @click="confirmDeleteSpecificDocument(documento)"
+                                        class="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                        title="Eliminar documento"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensaje si no hay documentos -->
+                        <div v-if="!selectedCur.documentos || selectedCur.documentos.length === 0" class="mb-4">
+                            <div class="p-4 bg-white rounded-lg border border-gray-200 text-center text-gray-500">
+                                <svg class="h-12 w-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p>No hay documentos adjuntos</p>
+                            </div>
+                        </div>
+
+                        <!-- Agregar nuevo documento -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    Agregar documento PDF
+                                </label>
+                                <input 
+                                    @change="onDetailFileChange" 
+                                    type="file" 
+                                    accept=".pdf" 
+                                    ref="detailFileInput"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                >
+                                <p class="text-xs text-gray-500 mt-1">Máximo 10MB. Solo archivos PDF.</p>
+                                <div v-if="detailFileErrors.length > 0" class="mt-2">
+                                    <div v-for="error in detailFileErrors" :key="error" class="text-red-600 text-xs">
+                                        {{ error }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Botón para subir -->
+                            <div v-if="selectedDetailFile" class="flex justify-end">
+                                <button 
+                                    @click="addDocument"
+                                    :disabled="uploadingDocument"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                >
+                                    {{ uploadingDocument ? 'Subiendo...' : 'Agregar documento' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-6 border-t border-gray-200">
+                    <button @click="showDetailsModal = false"
+                        class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
     </AppLayout>
 </template>
 
@@ -262,6 +479,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import curService from '@/services/curService'
 import proveedorService from '@/services/proveedorService'
 import renglonService from '@/services/renglonService'
+import documentoService from '@/services/documentoService'
 
 // Estado principal
 const loading = ref(true)
@@ -276,14 +494,25 @@ const filtroRenglon = ref('')
 // Estado del modal
 const showModal = ref(false)
 const submitting = ref(false)
+const showDetailsModal = ref(false)
+const selectedCur = ref(null)
+
+// Variables para archivo (singular como facturas)
+const selectedFile = ref(null)
+const fileErrors = ref([])
+
+// Variables para documentos en vista de detalles
+const selectedDetailFile = ref(null)
+const detailFileErrors = ref([])
+const uploadingDocument = ref(false)
 
 // Formulario
 const form = ref({
     fecha_compromiso: new Date().toISOString().split('T')[0],
-    numero_documento: '',
+    numero_cur: '',
     proveedor_id: '',
     renglon_id: '',
-    monto_comprometido: 0,
+    monto: 0,
     descripcion: ''
 })
 
@@ -322,7 +551,9 @@ const loadCurs = async () => {
     try {
         loading.value = true
         const response = await curService.getAll()
-        curs.value = response.data.cur || response.data
+        console.log('Respuesta CURs:', response)
+        // El backend responde con {success: true, data: [...]}
+        curs.value = response.data?.data || response.data || []
     } catch (error) {
         console.error('Error al cargar compromisos:', error)
         showAlert('error', 'Error al cargar compromisos')
@@ -334,54 +565,85 @@ const loadCurs = async () => {
 const loadProveedores = async () => {
     try {
         const response = await proveedorService.getAll()
-        proveedores.value = response.data.proveedores || response.data
+        console.log('Respuesta proveedores:', response)
+        // El backend responde con {success: true, data: [...]}
+        proveedores.value = response.data?.data || response.data || []
     } catch (error) {
         console.error('Error al cargar proveedores:', error)
+        showAlert('error', 'Error al cargar proveedores')
     }
 }
 
 const loadRenglones = async () => {
     try {
         const response = await renglonService.getAll()
-        renglones.value = response.data.renglones || response.data
+        console.log('Respuesta renglones:', response)
+        // El backend responde con {success: true, data: [...]}
+        renglones.value = response.data?.data || response.data || []
     } catch (error) {
         console.error('Error al cargar renglones:', error)
+        showAlert('error', 'Error al cargar renglones')
     }
 }
 
 const openCreateModal = () => {
     form.value = {
         fecha_compromiso: new Date().toISOString().split('T')[0],
-        numero_documento: '',
+        numero_cur: '',
         proveedor_id: '',
         renglon_id: '',
-        monto_comprometido: 0,
+        monto: 0,
         descripcion: ''
     }
+    selectedFile.value = null
+    fileErrors.value = []
     showModal.value = true
 }
 
 const closeModal = () => {
     showModal.value = false
+    selectedFile.value = null
+    fileErrors.value = []
 }
 
 const submitForm = async () => {
     try {
         submitting.value = true
-        await curService.create(form.value)
+        
+        // Crear FormData igual que facturas
+        const formData = new FormData()
+        
+        // Agregar datos del formulario
+        Object.keys(form.value).forEach(key => {
+            if (form.value[key] !== null && form.value[key] !== undefined) {
+                formData.append(key, form.value[key])
+            }
+        })
+        
+        // Agregar archivo si existe (singular)
+        if (selectedFile.value) {
+            formData.append('documento', selectedFile.value)
+        }
+        
+        // Crear el compromiso
+        await curService.create(formData)
+        
         showAlert('success', 'Compromiso creado correctamente')
         closeModal()
         await loadCurs()
     } catch (error) {
         console.error('Error al crear compromiso:', error)
-        showAlert('error', 'Error al crear compromiso')
+        showAlert('error', error.response?.data?.message || 'Error al crear compromiso')
     } finally {
         submitting.value = false
     }
 }
 
 const viewDetails = (cur) => {
-    // Implementar vista de detalles
+    selectedCur.value = cur
+    selectedDetailFile.value = null
+    detailFileErrors.value = []
+    showDetailsModal.value = true
 }
 
 const confirmAnular = (cur) => {
@@ -416,5 +678,159 @@ const formatMoney = (amount) => {
 const formatDate = (dateString) => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleDateString('es-GT')
+}
+
+// Método para manejo de archivo (igual que facturas)
+const onFileChange = (event) => {
+    const file = event.target.files[0]
+    fileErrors.value = []
+    
+    if (!file) {
+        selectedFile.value = null
+        return
+    }
+    
+    // Validar que sea PDF
+    if (file.type !== 'application/pdf') {
+        fileErrors.value.push('El archivo debe ser un PDF')
+        selectedFile.value = null
+        return
+    }
+    
+    // Validar tamaño (10MB máximo)
+    if (file.size > 10 * 1024 * 1024) {
+        fileErrors.value.push('El archivo no puede ser mayor a 10MB')
+        selectedFile.value = null
+        return
+    }
+    
+    selectedFile.value = file
+}
+
+
+
+const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// Método simplificado igual que facturas
+const downloadDocument = async (cur) => {
+    try {
+        window.open(`http://localhost:8000/api/cur/${cur.id}/documento`, '_blank')
+    } catch (error) {
+        console.error('Error al descargar documento:', error)
+        showAlert('error', 'Error al descargar el documento')
+    }
+}
+
+// Método para manejo de archivo en vista de detalles
+const onDetailFileChange = (event) => {
+    const file = event.target.files[0]
+    detailFileErrors.value = []
+    
+    if (!file) {
+        selectedDetailFile.value = null
+        return
+    }
+    
+    // Validar que sea PDF
+    if (file.type !== 'application/pdf') {
+        detailFileErrors.value.push('El archivo debe ser un PDF')
+        selectedDetailFile.value = null
+        return
+    }
+    
+    // Validar tamaño (10MB máximo)
+    if (file.size > 10 * 1024 * 1024) {
+        detailFileErrors.value.push('El archivo no puede ser mayor a 10MB')
+        selectedDetailFile.value = null
+        return
+    }
+    
+    selectedDetailFile.value = file
+}
+
+// Método para agregar nuevo documento (múltiples documentos)
+const addDocument = async () => {
+    if (!selectedDetailFile.value || !selectedCur.value) return
+    
+    try {
+        uploadingDocument.value = true
+        
+        const formData = new FormData()
+        formData.append('documentos[]', selectedDetailFile.value)
+        
+        // Usar el servicio de CUR para agregar documentos
+        await curService.addDocuments(selectedCur.value.id, formData)
+        
+        showAlert('success', 'Documento agregado correctamente')
+        
+        // Recargar los datos del CUR específico
+        await loadCurs()
+        
+        // Actualizar el CUR seleccionado con los nuevos datos
+        const updatedCur = curs.value.find(c => c.id === selectedCur.value.id)
+        if (updatedCur) {
+            selectedCur.value = updatedCur
+        }
+        
+        // Limpiar la selección de archivo
+        selectedDetailFile.value = null
+        detailFileErrors.value = []
+        
+        // Limpiar el input de archivo
+        if (document.querySelector('input[ref="detailFileInput"]')) {
+            document.querySelector('input[ref="detailFileInput"]').value = ''
+        }
+        
+    } catch (error) {
+        console.error('Error al agregar documento:', error)
+        showAlert('error', error.response?.data?.message || 'Error al agregar el documento')
+    } finally {
+        uploadingDocument.value = false
+    }
+}
+
+// Método para descargar documento específico
+const downloadSpecificDocument = async (documento) => {
+    try {
+        window.open(`http://localhost:8000/api/documentos/${documento.id}/download`, '_blank')
+    } catch (error) {
+        console.error('Error al descargar documento:', error)
+        showAlert('error', 'Error al descargar el documento')
+    }
+}
+
+// Método para confirmar eliminación de documento específico
+const confirmDeleteSpecificDocument = (documento) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.')) {
+        deleteSpecificDocument(documento)
+    }
+}
+
+// Método para eliminar documento específico
+const deleteSpecificDocument = async (documento) => {
+    try {
+        await documentoService.delete(documento.id)
+        
+        showAlert('success', 'Documento eliminado correctamente')
+        
+        // Recargar los datos
+        await loadCurs()
+        
+        // Actualizar el CUR seleccionado
+        const updatedCur = curs.value.find(c => c.id === selectedCur.value.id)
+        if (updatedCur) {
+            selectedCur.value = updatedCur
+        }
+        
+    } catch (error) {
+        console.error('Error al eliminar documento:', error)
+        showAlert('error', error.response?.data?.message || 'Error al eliminar el documento')
+    }
 }
 </script>

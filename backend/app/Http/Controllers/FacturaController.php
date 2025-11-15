@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class FacturaController extends Controller
 {
@@ -112,7 +113,7 @@ class FacturaController extends Controller
                     'tipo_archivo' => $archivo->getClientOriginalExtension(),
                     'tamanio' => $archivo->getSize(),
                     'descripcion' => 'Factura PDF',
-                    'usuario_id' => 1,
+                    'usuario_id' => Auth::id() ?? 1, // ID del usuario autenticado
                     'estado' => 1
                 ]);
 
@@ -269,7 +270,7 @@ class FacturaController extends Controller
                     'tipo_archivo' => $archivo->getClientOriginalExtension(),
                     'tamanio' => $archivo->getSize(),
                     'descripcion' => 'Factura PDF',
-                    'usuario_id' => 1,
+                    'usuario_id' => Auth::id() ?? 1, // ID del usuario autenticado
                     'estado' => 1
                 ]);
 
@@ -458,6 +459,50 @@ class FacturaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar el documento: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener facturas con detalles para reportes
+     */
+    public function facturasParaReporte(Request $request)
+    {
+        try {
+            $query = FacturaCab::with(['proveedor', 'detalles.renglon'])
+                ->orderBy('fecha', 'desc');
+
+            // Filtros de fecha
+            if ($request->has('fecha_inicio') && $request->fecha_inicio !== '') {
+                $query->whereDate('fecha', '>=', $request->fecha_inicio);
+            }
+
+            if ($request->has('fecha_fin') && $request->fecha_fin !== '') {
+                $query->whereDate('fecha', '<=', $request->fecha_fin);
+            }
+
+            // Filtros adicionales
+            if ($request->has('tipo') && $request->tipo !== '') {
+                $query->where('tipo', $request->tipo);
+            }
+
+            if ($request->has('proveedor_id') && $request->proveedor_id !== '') {
+                $query->where('proveedor_id', $request->proveedor_id);
+            }
+
+            $facturas = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $facturas,
+                'total_facturas' => $facturas->count(),
+                'total_general' => $facturas->sum('total')
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener facturas para reporte: ' . $e->getMessage()
             ], 500);
         }
     }

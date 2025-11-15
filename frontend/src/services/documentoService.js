@@ -18,20 +18,25 @@ export default {
   /**
    * Subir nuevo documento
    */
-  create(data) {
-    const formData = new FormData()
-    
-    // Agregar archivos al FormData (el backend espera 'file')
-    if (data.archivo) {
-      formData.append('file', data.archivo)
-    }
-    
-    // Agregar otros campos
-    Object.keys(data).forEach(key => {
-      if (key !== 'archivo') {
-        formData.append(key, data[key])
+  create(formData) {
+    // Si recibimos un objeto normal, convertirlo a FormData
+    if (!(formData instanceof FormData)) {
+      const newFormData = new FormData()
+      
+      // Agregar archivos al FormData (el backend espera 'file')
+      if (formData.archivo) {
+        newFormData.append('file', formData.archivo)
       }
-    })
+      
+      // Agregar otros campos
+      Object.keys(formData).forEach(key => {
+        if (key !== 'archivo') {
+          newFormData.append(key, formData[key])
+        }
+      })
+      
+      formData = newFormData
+    }
 
     return apiClient.post('/documentos', formData, {
       headers: {

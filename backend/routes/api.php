@@ -107,6 +107,7 @@ Route::middleware('web')->group(function () {
     Route::prefix('facturas')->group(function () {
         Route::get('/', [FacturaController::class, 'index'])->name('facturas.index');
         Route::post('/', [FacturaController::class, 'store'])->name('facturas.store');
+        Route::get('/reportes', [FacturaController::class, 'facturasParaReporte'])->name('facturas.reportes');
         Route::get('/proveedores', [FacturaController::class, 'getProveedores'])->name('facturas.proveedores');
         Route::get('/renglones', [FacturaController::class, 'getRenglones'])->name('facturas.renglones');
         Route::get('/{id}', [FacturaController::class, 'show'])->name('facturas.show');
@@ -131,6 +132,10 @@ Route::middleware('web')->group(function () {
         Route::get('/', [CurController::class, 'index'])->name('cur.index');
         Route::post('/', [CurController::class, 'store'])->name('cur.store');
         Route::get('/{id}', [CurController::class, 'show'])->name('cur.show');
+        Route::get('/{id}/documento', [CurController::class, 'descargarDocumento'])->name('cur.documento');
+        Route::post('/{id}/documento', [CurController::class, 'uploadDocument'])->name('cur.uploadDocument');
+        Route::delete('/{id}/documento', [CurController::class, 'deleteDocument'])->name('cur.deleteDocument');
+        Route::post('/{id}/documentos', [CurController::class, 'addDocuments'])->name('cur.addDocuments');
         Route::delete('/{id}', [CurController::class, 'destroy'])->name('cur.destroy');
     });
 

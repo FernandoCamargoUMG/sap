@@ -46,6 +46,13 @@ class DocumentoController extends Controller
     public function store(Request $request)
     {
         try {
+            // Debug: Log de los datos recibidos
+            Log::info('Datos recibidos en DocumentoController::store', [
+                'all' => $request->all(),
+                'files' => $request->allFiles(),
+                'has_file' => $request->hasFile('file')
+            ]);
+            
             // Decodificar el tipo de entidad que viene codificado del frontend
             $decodedType = urldecode(urldecode($request->documentable_type));
             
@@ -55,7 +62,7 @@ class DocumentoController extends Controller
                 'nombre_documento' => 'required|string',
                 'descripcion' => 'nullable|string',
                 'documentable_type' => 'required|string',
-                'documentable_id' => 'required|integer'
+                'documentable_id' => 'required|numeric'
             ]);
 
             if ($validator->fails()) {
