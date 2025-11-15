@@ -6,6 +6,11 @@ use App\Models\Documento;
 use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class DocumentoController extends Controller
 {
@@ -36,68 +41,88 @@ class DocumentoController extends Controller
     }
 
     /**
-     * Subir nuevo documento
+     * Almacenar un nuevo documento
      */
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'archivo' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
-                'documentable_type' => 'required|string|max:50',
-                'documentable_id' => 'required|integer',
-                'descripcion' => 'nullable|string|max:500',
-                'usuario_id' => 'required|integer'
+            // Decodificar el tipo de entidad que viene codificado del frontend
+            $decodedType = urldecode(urldecode($request->documentable_type));
+            
+            // Validar los datos de entrada
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+                'nombre_documento' => 'required|string',
+                'descripcion' => 'nullable|string',
+                'documentable_type' => 'required|string',
+                'documentable_id' => 'required|integer'
             ]);
 
-            $archivo = $request->file('archivo');
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Datos de entrada inválidos',
+                    'details' => $validator->errors()
+                ], 422);
+            }
+
+            $file = $request->file('file');
+            
+            // Obtener tipo de entidad sin namespace para carpeta
+            $entityType = last(explode('\\', $decodedType));
             
             // Generar nombre único para el archivo
-            $nombreOriginal = $archivo->getClientOriginalName();
-            $extension = $archivo->getClientOriginalExtension();
-            $nombreUnico = uniqid() . '_' . time() . '.' . $extension;
+            $fileName = time() . '_' . Str::random(10) . '.pdf';
             
-            // Definir la carpeta según el tipo de documento
-            $carpeta = $this->getCarpetaPorTipo($validated['documentable_type']);
-            $rutaCompleta = $carpeta . '/' . $nombreUnico;
+            // Definir la ruta completa (sin 'public/' para la BD)
+            $filePath = "documentos/{$entityType}/{$fileName}";
             
-            // Subir archivo
-            $rutaArchivo = $archivo->storeAs('public/' . $rutaCompleta);
+            // Almacenar el archivo en el disco público
+            $path = $file->storeAs("documentos/{$entityType}", $fileName, 'public');
             
-            // Crear registro en base de datos
+            if (!$path) {
+                return response()->json(['error' => 'Error al almacenar el archivo'], 500);
+            }
+
+            // Crear registro en la base de datos
             $documento = Documento::create([
-                'documentable_type' => $validated['documentable_type'],
-                'documentable_id' => $validated['documentable_id'],
-                'usuario_id' => $validated['usuario_id'],
-                'nombre_archivo' => $nombreOriginal,
-                'ruta_archivo' => $rutaCompleta,
-                'tipo_archivo' => $extension,
-                'tamanio' => $archivo->getSize(),
-                'descripcion' => $validated['descripcion'] ?? null,
+                'nombre_archivo' => $request->nombre_documento, // Campo correcto según migración
+                'descripcion' => $request->descripcion,
+                'ruta_archivo' => $filePath,
+                'tipo_archivo' => $file->getClientOriginalExtension(),
+                'tamanio' => $file->getSize(), // Campo correcto según migración
+                'documentable_type' => $decodedType,
+                'documentable_id' => $request->documentable_id,
+                'usuario_id' => Auth::id() ?? 1, // Campo correcto según migración
                 'estado' => 1
             ]);
 
             // Registrar en bitácora
-            Bitacora::registrar(
-                'documentos',
-                $documento->id,
-                'creado',
-                $validated['usuario_id'],
-                "Documento {$documento->nombre_archivo} subido para {$documento->documentable_type}:{$documento->documentable_id}"
-            );
+            Bitacora::create([
+                'usuario_id' => Auth::id() ?? 1,
+                'tabla_afectada' => 'documentos', // Campo correcto según migración
+                'registro_id' => $documento->id, // ID del documento creado
+                'accion' => 'creado', // Usar valores del enum definido
+                'detalle' => "Documento '{$request->nombre_documento}' subido para " . 
+                           $entityType . " ID: {$request->documentable_id}"
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Documento subido exitosamente',
-                'data' => [
-                    'documento' => $documento->load('usuario'),
-                    'url_descarga' => Storage::url($rutaArchivo)
-                ]
+                'documento' => $documento->load('usuario')
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
+            Log::error('Error al subir documento:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'request' => $request->all()
+            ]);
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Error al subir documento: ' . $e->getMessage()
+                'error' => 'Error interno del servidor',
+                'message' => $e->getMessage()
             ], 500);
         }
     }
@@ -136,15 +161,17 @@ class DocumentoController extends Controller
             ], 404);
         }
 
-        // Verificar si el archivo existe
-        if (!Storage::exists($documento->ruta_archivo)) {
+        // Usar el disco público para verificar y descargar
+        $rutaArchivo = $documento->ruta_archivo;
+
+        if (!Storage::disk('public')->exists($rutaArchivo)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Archivo no encontrado en el servidor'
+                'message' => 'Archivo no encontrado en el servidor: ' . $rutaArchivo
             ], 404);
         }
 
-        return Storage::download($documento->ruta_archivo, $documento->nombre_archivo);
+        return Storage::disk('public')->download($rutaArchivo, $documento->nombre_archivo);
     }
 
     /**
@@ -227,8 +254,11 @@ class DocumentoController extends Controller
      */
     public function byEntity($documentableType, $documentableId)
     {
+        // Decodificar el tipo de entidad que viene codificado del frontend
+        $decodedType = urldecode(urldecode($documentableType));
+        
         $documentos = Documento::with('usuario')
-            ->where('documentable_type', $documentableType)
+            ->where('documentable_type', $decodedType)
             ->where('documentable_id', $documentableId)
             ->where('estado', 1)
             ->orderBy('created_at', 'desc')
@@ -237,7 +267,11 @@ class DocumentoController extends Controller
         // Agregar URL de descarga a cada documento
         $documentos->map(function ($documento) {
             if ($documento->ruta_archivo) {
-                $documento->url_descarga = Storage::url('public/' . $documento->ruta_archivo);
+                // Si ya tiene 'public/', no agregarlo de nuevo
+                $rutaUrl = str_starts_with($documento->ruta_archivo, 'public/') 
+                    ? $documento->ruta_archivo 
+                    : 'public/' . $documento->ruta_archivo;
+                $documento->url_descarga = Storage::url($rutaUrl);
             }
             return $documento;
         });

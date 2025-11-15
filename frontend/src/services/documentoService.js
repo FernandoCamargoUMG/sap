@@ -21,9 +21,9 @@ export default {
   create(data) {
     const formData = new FormData()
     
-    // Agregar archivos al FormData
+    // Agregar archivos al FormData (el backend espera 'file')
     if (data.archivo) {
-      formData.append('archivo', data.archivo)
+      formData.append('file', data.archivo)
     }
     
     // Agregar otros campos
@@ -78,7 +78,9 @@ export default {
    * Obtener documentos por entidad (relación polimórfica)
    */
   getByEntity(documentableType, documentableId) {
-    return apiClient.get(`/documentos/${encodeURIComponent(documentableType)}/${documentableId}`)
+    // Codificar correctamente el tipo de entidad con doble encoding para barras invertidas
+    const encodedType = encodeURIComponent(encodeURIComponent(documentableType))
+    return apiClient.get(`/documentos/${encodedType}/${documentableId}`)
   },
 
   /**

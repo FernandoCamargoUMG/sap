@@ -344,17 +344,26 @@
                     </div>
 
                     <!-- Documentos adjuntos -->
-                    <div>
+                    <div v-if="isEditing && form.id">
                         <DocumentUploader
                             ref="documentUploader"
                             title="Documentos de respaldo del presupuesto"
                             documentable-type="App\Models\PresupuestoCab"
-                            :documentable-id="form.id || null"
+                            :documentable-id="form.id"
                             :usuario-id="1"
                             @uploaded="handleDocumentUploaded"
                             @deleted="handleDocumentDeleted"
                             @error="handleDocumentError"
                         />
+                    </div>
+                    <div v-else class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <div class="text-center text-gray-600">
+                            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p class="font-semibold">Documentos de respaldo</p>
+                            <p class="text-sm">Podrás subir documentos después de crear el presupuesto</p>
+                        </div>
                     </div>
 
                     <!-- Botones -->
@@ -602,17 +611,26 @@
                         </div>
 
                         <!-- Documentos de respaldo -->
-                        <div>
+                        <div v-if="movimientoCreatedId">
                             <DocumentUploader
                                 ref="movimientoDocumentUploader"
                                 title="Documentos de respaldo del movimiento"
                                 documentable-type="App\Models\MovimientoCab"
-                                :documentable-id="null"
+                                :documentable-id="movimientoCreatedId"
                                 :usuario-id="1"
                                 @uploaded="handleDocumentUploaded"
                                 @deleted="handleDocumentDeleted"
                                 @error="handleDocumentError"
                             />
+                        </div>
+                        <div v-else class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                            <div class="text-center text-gray-600">
+                                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="font-semibold">Documentos de respaldo</p>
+                                <p class="text-sm">Los documentos se pueden subir después de crear el movimiento</p>
+                            </div>
                         </div>
 
                         <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
@@ -671,6 +689,7 @@ const deleting = ref(false)
 // Estado del modal de movimientos
 const showMovimientoModal = ref(false)
 const presupuestoSeleccionado = ref(null)
+const movimientoCreatedId = ref(null)
 const movimientoForm = ref({
     presupuesto_id: null,
     anio: null,
@@ -796,7 +815,12 @@ const openEditModal = (presupuesto) => {
         id: presupuesto.id,
         anio: presupuesto.anio,
         mes: presupuesto.mes,
-        descripcion: presupuesto.descripcion
+        descripcion: presupuesto.descripcion,
+        renglones: presupuesto.detalles ? presupuesto.detalles.map(detalle => ({
+            renglon_id: detalle.renglon_id,
+            monto_asignado: detalle.monto_asignado,
+            descripcion: detalle.descripcion || ''
+        })) : []
     }
     showModal.value = true
 }
@@ -906,17 +930,8 @@ const submitForm = async () => {
             presupuestoCreado = response.data.data
         }
 
-        // Subir documento si hay uno seleccionado
-        if (documentUploader.value && documentUploader.value.getSelectedFile() && presupuestoCreado) {
-            try {
-                // Actualizar el documentable_id en el uploader
-                documentUploader.value.$props.documentableId = presupuestoCreado.id
-                await documentUploader.value.submit()
-            } catch (documentError) {
-                console.error('Error al subir documento:', documentError)
-                showAlert('error', 'Presupuesto creado pero error al subir documento')
-            }
-        }
+        // Para nuevos presupuestos, no manejamos documentos aquí ya que solo se muestran en modo edición
+        // Los documentos se pueden subir después editando el presupuesto
 
         closeModal()
         await loadPresupuestos()
@@ -951,7 +966,7 @@ const openMovimientoModal = async (presupuesto) => {
             presupuesto_id: presupuesto.id,
             anio: presupuesto.anio || new Date().getFullYear(),
             mes: presupuesto.mes || new Date().getMonth() + 1,
-            tipo: 'gasto',
+            tipo: 'ejecucion_presupuestaria',
             renglon_id: null,
             monto: 0,
             fecha: new Date().toISOString().split('T')[0],
@@ -969,11 +984,12 @@ const openMovimientoModal = async (presupuesto) => {
 const closeMovimientoModal = () => {
     showMovimientoModal.value = false
     presupuestoSeleccionado.value = null
+    movimientoCreatedId.value = null
     movimientoForm.value = {
         presupuesto_id: null,
         anio: null,
         mes: null,
-        tipo: 'gasto',
+        tipo: 'ejecucion_presupuestaria',
         renglon_id: null,
         monto: 0,
         fecha: new Date().toISOString().split('T')[0],
@@ -1028,18 +1044,6 @@ const crearMovimiento = async () => {
 
         const response = await movimientoService.create(movimientoData)
         const movimientoCreado = response.data.data
-
-        // Subir documento si hay uno seleccionado
-        if (movimientoDocumentUploader.value && movimientoDocumentUploader.value.getSelectedFile() && movimientoCreado) {
-            try {
-                // Actualizar el documentable_id en el uploader
-                movimientoDocumentUploader.value.$props.documentableId = movimientoCreado.id
-                await movimientoDocumentUploader.value.submit()
-            } catch (documentError) {
-                console.error('Error al subir documento:', documentError)
-                showAlert('error', 'Movimiento creado pero error al subir documento')
-            }
-        }
 
         showAlert('success', 'Movimiento creado correctamente')
         closeMovimientoModal()

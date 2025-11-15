@@ -25,44 +25,63 @@
           ref="fileInput"
           type="file"
           accept=".pdf"
+          multiple
           @change="handleFileSelect"
           class="hidden"
         />
 
-        <div v-if="!selectedFile">
+        <div v-if="selectedFiles.length === 0">
           <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir documento PDF</h3>
-          <p class="text-gray-600 mb-4">Arrastra y suelta tu archivo aquí o</p>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir documentos PDF</h3>
+          <p class="text-gray-600 mb-4">Arrastra y suelta tus archivos aquí o</p>
           <button
             type="button"
             @click="$refs.fileInput.click()"
             class="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
           >
-            Seleccionar archivo
+            Seleccionar archivos
           </button>
-          <p class="text-xs text-gray-500 mt-2">Solo archivos PDF, máximo 10MB</p>
+          <p class="text-xs text-gray-500 mt-2">Solo archivos PDF, máximo 10MB cada uno</p>
         </div>
 
-        <!-- Vista previa del archivo seleccionado -->
+        <!-- Vista previa de los archivos seleccionados -->
         <div v-else class="space-y-4">
-          <div class="flex items-center justify-center space-x-3">
-            <svg class="h-8 w-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
-            </svg>
-            <div class="text-left">
-              <p class="font-semibold text-gray-900">{{ selectedFile.name }}</p>
-              <p class="text-sm text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+          <div v-for="(file, index) in selectedFiles" :key="index" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+              <svg class="h-8 w-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+              </svg>
+              <div class="text-left">
+                <p class="font-semibold text-gray-900">{{ file.name }}</p>
+                <p class="text-sm text-gray-500">{{ formatFileSize(file.size) }}</p>
+              </div>
             </div>
+            <button
+              @click="removeFile(index)"
+              class="p-1 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              title="Eliminar archivo"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <div class="flex space-x-3">
+          <div class="flex justify-between mt-4">
+            <button
+              type="button"
+              @click="$refs.fileInput.click()"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Agregar más archivos
+            </button>
             <button
               type="button"
               @click="clearFile"
-              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              class="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
             >
-              Cambiar archivo
+              Limpiar todo
             </button>
           </div>
         </div>
@@ -77,6 +96,36 @@
           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           placeholder="Descripción del documento..."
         ></textarea>
+      </div>
+
+      <!-- Botón para subir archivos -->
+      <div v-if="selectedFiles.length > 0 && documentableId" class="mt-4">
+        <button
+          @click="uploadFile"
+          :disabled="loading"
+          class="w-full bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+        >
+          <svg v-if="loading" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{{ loading ? 'Subiendo...' : `Subir ${selectedFiles.length} archivo${selectedFiles.length > 1 ? 's' : ''}` }}</span>
+        </button>
+      </div>
+
+      <!-- Botón de subir -->
+      <div v-if="selectedFiles.length > 0" class="mt-4">
+        <button
+          @click="uploadFile"
+          :disabled="loading || !documentableId"
+          class="w-full bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+        >
+          <svg v-if="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ loading ? 'Subiendo...' : `Subir ${selectedFiles.length} documento${selectedFiles.length > 1 ? 's' : ''}` }}
+        </button>
       </div>
 
       <!-- Errores de validación -->
@@ -170,7 +219,7 @@ export default {
   emits: ['uploaded', 'deleted', 'error'],
   data() {
     return {
-      selectedFile: null,
+      selectedFiles: [], // Cambiado para múltiples archivos
       descripcion: '',
       isDragging: false,
       validationErrors: [],
@@ -205,26 +254,36 @@ export default {
     },
 
     handleFileSelect(event) {
-      const file = event.target.files[0]
-      if (file) {
-        this.handleFile(file)
+      const files = Array.from(event.target.files)
+      if (files.length > 0) {
+        this.handleFiles(files)
+      }
+    },
+
+    handleFiles(files) {
+      this.validationErrors = []
+      const validFiles = []
+      
+      files.forEach(file => {
+        const validation = documentoService.validatePDF(file)
+        if (!validation.isValid) {
+          this.validationErrors.push(...validation.errors.map(error => `${file.name}: ${error}`))
+        } else {
+          validFiles.push(file)
+        }
+      })
+
+      if (validFiles.length > 0) {
+        this.selectedFiles = [...this.selectedFiles, ...validFiles]
       }
     },
 
     handleFile(file) {
-      this.validationErrors = []
-      
-      const validation = documentoService.validatePDF(file)
-      if (!validation.isValid) {
-        this.validationErrors = validation.errors
-        return
-      }
-
-      this.selectedFile = file
+      this.handleFiles([file])
     },
 
     clearFile() {
-      this.selectedFile = null
+      this.selectedFiles = []
       this.descripcion = ''
       this.validationErrors = []
       if (this.$refs.fileInput) {
@@ -232,27 +291,48 @@ export default {
       }
     },
 
+    removeFile(index) {
+      this.selectedFiles.splice(index, 1)
+    },
+
     async uploadFile() {
-      if (!this.selectedFile || !this.documentableId) {
+      if (this.selectedFiles.length === 0 || !this.documentableId) {
         return false
       }
 
       try {
         this.loading = true
+        const uploadedFiles = []
         
-        const formData = new FormData()
-        formData.append('archivo', this.selectedFile)
-        formData.append('documentable_type', this.documentableType)
-        formData.append('documentable_id', this.documentableId)
-        formData.append('usuario_id', this.usuarioId)
-        if (this.descripcion) {
-          formData.append('descripcion', this.descripcion)
-        }
+        // Subir archivos uno por uno
+        for (const file of this.selectedFiles) {
+          console.log('Subiendo archivo:', {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            documentableType: this.documentableType,
+            documentableId: this.documentableId
+          })
+          
+          const formData = new FormData()
+          formData.append('file', file) // Backend espera 'file'
+          formData.append('nombre_documento', file.name) // Agregar nombre requerido
+          formData.append('documentable_type', this.documentableType)
+          formData.append('documentable_id', this.documentableId)
+          if (this.descripcion) {
+            formData.append('descripcion', this.descripcion)
+          }
 
-        const response = await documentoService.upload(formData)
+          console.log('FormData creado, enviando a API...')
+          const response = await documentoService.upload(formData)
+          
+          if (response.data.success) {
+            uploadedFiles.push(response.data.documento)
+          }
+        }
         
-        if (response.data.success) {
-          this.$emit('uploaded', response.data.data)
+        if (uploadedFiles.length > 0) {
+          this.$emit('uploaded', uploadedFiles)
           this.clearFile()
           await this.loadDocuments()
           return true
@@ -260,7 +340,12 @@ export default {
         
         return false
       } catch (error) {
-        console.error('Error al subir documento:', error)
+        console.error('Error completo al subir documento:', {
+          error: error,
+          response: error.response,
+          data: error.response?.data,
+          status: error.response?.status
+        })
         this.$emit('error', error.response?.data?.message || 'Error al subir documento')
         return false
       } finally {
@@ -343,6 +428,11 @@ export default {
     // Método público para obtener la descripción
     getDescription() {
       return this.descripcion
+    },
+
+    // Método público para verificar si hay archivo seleccionado
+    hasSelectedFile() {
+      return !!this.selectedFile
     }
   }
 }
