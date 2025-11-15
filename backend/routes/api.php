@@ -107,11 +107,13 @@ Route::middleware('web')->group(function () {
     Route::prefix('facturas')->group(function () {
         Route::get('/', [FacturaController::class, 'index'])->name('facturas.index');
         Route::post('/', [FacturaController::class, 'store'])->name('facturas.store');
-        Route::get('/deleted/list', [FacturaController::class, 'deleted'])->name('facturas.deleted');
+        Route::get('/proveedores', [FacturaController::class, 'getProveedores'])->name('facturas.proveedores');
+        Route::get('/renglones', [FacturaController::class, 'getRenglones'])->name('facturas.renglones');
         Route::get('/{id}', [FacturaController::class, 'show'])->name('facturas.show');
+        Route::get('/{id}/documento', [FacturaController::class, 'descargarDocumento'])->name('facturas.documento');
+        Route::delete('/{id}/documento', [FacturaController::class, 'eliminarDocumento'])->name('facturas.eliminar-documento');
         Route::put('/{id}', [FacturaController::class, 'update'])->name('facturas.update');
         Route::delete('/{id}', [FacturaController::class, 'destroy'])->name('facturas.destroy');
-        Route::post('/{id}/restore', [FacturaController::class, 'restore'])->name('facturas.restore');
     });
 
     // ========== MÓDULOS COMPLEMENTARIOS ==========

@@ -12,21 +12,18 @@ class FacturaCab extends Model
     protected $table = 'factura_cab';
 
     protected $fillable = [
-        'numero_factura',
-        'serie',
         'proveedor_id',
-        'fecha_factura',
-        'fecha_recepcion',
-        'monto_total',
-        'observaciones',
-        'usuario_id',
+        'folio',
+        'fecha',
+        'total',
+        'documento_id',
+        'tipo',
         'estado'
     ];
 
     protected $casts = [
-        'fecha_factura' => 'date',
-        'fecha_recepcion' => 'date',
-        'monto_total' => 'decimal:2',
+        'fecha' => 'date:Y-m-d',
+        'total' => 'decimal:2',
         'estado' => 'integer'
     ];
 
@@ -39,11 +36,11 @@ class FacturaCab extends Model
     }
 
     /**
-     * Relación con usuario que registró la factura
+     * Relación con documento
      */
-    public function usuario()
+    public function documento()
     {
-        return $this->belongsTo(Usuario::class, 'usuario_id');
+        return $this->belongsTo(Documento::class, 'documento_id');
     }
 
     /**
@@ -51,7 +48,7 @@ class FacturaCab extends Model
      */
     public function detalles()
     {
-        return $this->hasMany(FacturaDet::class, 'factura_cab_id');
+        return $this->hasMany(FacturaDet::class, 'factura_id');
     }
 
     /**
@@ -71,19 +68,28 @@ class FacturaCab extends Model
     }
 
     /**
-     * Scope para buscar por número de factura
+     * Scope para buscar por folio
      */
-    public function scopePorNumero($query, $numero)
+    public function scopePorFolio($query, $folio)
     {
-        return $query->where('numero_factura', $numero);
+        return $query->where('folio', $folio);
     }
 
     /**
-     * Calcular monto total desde los detalles
+     * Scope por tipo de factura
      */
-    public function calcularMontoTotal()
+    public function scopePorTipo($query, $tipo)
     {
-        $this->monto_total = $this->detalles()->sum('monto');
+        return $query->where('tipo', $tipo);
+    }
+
+    /**
+     * Calcular total desde los detalles
+     */
+    public function calcularTotal()
+    {
+        $this->total = $this->detalles()->sum('subtotal');
         $this->save();
+        return $this->total;
     }
 }

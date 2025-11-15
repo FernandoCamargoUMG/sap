@@ -12,28 +12,28 @@ class FacturaDet extends Model
     protected $table = 'factura_det';
 
     protected $fillable = [
-        'factura_cab_id',
+        'factura_id',
         'renglon_id',
-        'descripcion',
+        'item',
         'cantidad',
         'precio_unitario',
-        'monto',
+        'subtotal',
         'estado'
     ];
 
     protected $casts = [
-        'cantidad' => 'decimal:2',
+        'cantidad' => 'integer',
         'precio_unitario' => 'decimal:2',
-        'monto' => 'decimal:2',
+        'subtotal' => 'decimal:2',
         'estado' => 'integer'
     ];
 
     /**
      * Relación con encabezado de factura
      */
-    public function facturaCab()
+    public function factura()
     {
-        return $this->belongsTo(FacturaCab::class, 'factura_cab_id');
+        return $this->belongsTo(FacturaCab::class, 'factura_id');
     }
 
     /**
@@ -58,29 +58,26 @@ class FacturaDet extends Model
     protected static function booted()
     {
         static::creating(function ($detalle) {
-            $detalle->monto = $detalle->cantidad * $detalle->precio_unitario;
+            $detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
         });
 
         static::created(function ($detalle) {
-            $detalle->renglon->monto_ejecutado += $detalle->monto;
-            $detalle->renglon->actualizarSaldo();
+            // Actualizar total de la factura
+            $detalle->factura->calcularTotal();
         });
 
         static::updating(function ($detalle) {
-            $detalle->monto = $detalle->cantidad * $detalle->precio_unitario;
+            $detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
         });
 
         static::updated(function ($detalle) {
-            if ($detalle->isDirty('monto')) {
-                $diferencia = $detalle->monto - $detalle->getOriginal('monto');
-                $detalle->renglon->monto_ejecutado += $diferencia;
-                $detalle->renglon->actualizarSaldo();
-            }
+            // Actualizar total de la factura
+            $detalle->factura->calcularTotal();
         });
 
         static::deleted(function ($detalle) {
-            $detalle->renglon->monto_ejecutado -= $detalle->monto;
-            $detalle->renglon->actualizarSaldo();
+            // Actualizar total de la factura
+            $detalle->factura->calcularTotal();
         });
     }
 }

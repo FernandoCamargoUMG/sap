@@ -71,7 +71,7 @@ const routes = [
   {
     path: '/facturas',
     name: 'Facturas',
-    component: () => import('@/views/Facturas.vue'),
+    component: () => import('@/views/FacturasNuevo.vue'),
     meta: { requiresAuth: true }
   },
   {
