@@ -15,7 +15,7 @@ class MovimientoRequest extends FormRequest
     {
         return [
             'numero_movimiento' => 'required|string|max:50',
-            'tipo_movimiento' => 'required|string|max:50',
+            'tipo_movimiento' => 'required|string|in:ejecucion_presupuestaria,ajuste,traslado',
             'fecha_movimiento' => 'required|date',
             'descripcion' => 'required|string|max:500',
             'monto_total' => 'nullable|numeric|min:0',

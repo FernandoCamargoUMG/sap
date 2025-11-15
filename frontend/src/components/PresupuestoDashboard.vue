@@ -172,17 +172,6 @@
 
     <!-- Acciones Rápidas -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-        <h4 class="text-lg font-bold text-gray-900 mb-4">Acciones Rápidas</h4>
-        <div class="space-y-3">
-          <button @click="$emit('crear-movimiento')" class="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
-            � Crear Movimiento
-          </button>
-          <button @click="$emit('ver-movimientos')" class="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
-            📋 Ver Movimientos
-          </button>
-        </div>
-      </div>
       
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h4 class="text-lg font-bold text-gray-900 mb-4">Estadísticas</h4>

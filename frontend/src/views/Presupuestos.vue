@@ -13,7 +13,7 @@
           <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Nuevo Presupuesto
+          Nuevo Ejercicio Fiscal
         </button>
       </div>
 
@@ -173,9 +173,14 @@
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-black text-gray-900">
-            {{ isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto' }}
-          </h3>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900">
+              {{ isEditing ? 'Editar Ejercicio Fiscal' : 'Nuevo Ejercicio Fiscal' }}
+            </h3>
+            <p class="text-gray-600 text-sm mt-1">
+              {{ isEditing ? 'Modifica la información del ejercicio fiscal' : 'Crea un nuevo ejercicio fiscal para gestionar presupuestos' }}
+            </p>
+          </div>
           <button @click="closeModal" class="text-gray-500 hover:text-gray-700">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -232,77 +237,89 @@
             ></textarea>
           </div>
 
-          <!-- Detalles del presupuesto -->
+          <!-- Asignación de Renglones -->
           <div>
-            <div class="flex justify-between items-center mb-4">
-              <h4 class="text-lg font-bold text-gray-900">Detalles por Renglón</h4>
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-lg font-bold text-gray-900">Asignación Presupuestaria por Renglón</h4>
               <button
                 type="button"
-                @click="addDetalle"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                @click="addRenglon"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
               >
-                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Agregar Renglón
+                + Agregar Renglón
               </button>
             </div>
 
-            <div class="space-y-4">
-              <div v-for="(detalle, index) in form.detalles" :key="index" class="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Renglón *</label>
-                    <select
-                      v-model="detalle.renglon_id"
-                      required
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Seleccionar renglón</option>
-                      <option v-for="renglon in renglones" :key="renglon.id" :value="renglon.id">
-                        {{ renglon.codigo }} - {{ renglon.nombre }}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Monto Asignado *</label>
-                    <input
-                      v-model="detalle.monto_asignado"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="0.00"
-                    >
-                  </div>
-                  <div class="md:col-span-2">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Descripción</label>
-                    <input
-                      v-model="detalle.descripcion"
-                      type="text"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="Descripción del detalle (opcional)"
-                    >
-                  </div>
-                  <div class="md:col-span-2 flex justify-end">
-                    <button
-                      type="button"
-                      @click="removeDetalle(index)"
-                      class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Eliminar Renglón
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <div v-if="form.renglones.length === 0" class="text-center py-8 text-gray-500">
+              <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <p>No hay renglones asignados</p>
+              <p class="text-sm">Agrega al menos un renglón con su monto presupuestado</p>
             </div>
 
-            <!-- Total calculado -->
-            <div class="mt-4 p-4 bg-primary-50 rounded-xl">
-              <div class="flex justify-between items-center">
-                <span class="text-lg font-bold text-gray-900">Total del Presupuesto:</span>
-                <span class="text-2xl font-black text-primary-600">Q{{ formatMoney(calculateTotal()) }}</span>
+            <div v-else class="space-y-4">
+              <div 
+                v-for="(renglon, index) in form.renglones" 
+                :key="index"
+                class="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50"
+              >
+                <div class="md:col-span-5">
+                  <label class="block text-sm font-bold text-gray-700 mb-2">Renglón *</label>
+                  <select
+                    v-model="renglon.renglon_id"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Seleccionar renglón</option>
+                    <option 
+                      v-for="r in renglones" 
+                      :key="r.id" 
+                      :value="r.id"
+                      :disabled="form.renglones.some((fr, i) => i !== index && fr.renglon_id === r.id)"
+                    >
+                      {{ r.codigo }} - {{ r.nombre }}
+                    </option>
+                  </select>
+                </div>
+                <div class="md:col-span-3">
+                  <label class="block text-sm font-bold text-gray-700 mb-2">Monto Asignado *</label>
+                  <input
+                    v-model="renglon.monto_asignado"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="0.00"
+                  >
+                </div>
+                <div class="md:col-span-3">
+                  <label class="block text-sm font-bold text-gray-700 mb-2">Descripción</label>
+                  <input
+                    v-model="renglon.descripcion"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Descripción opcional"
+                  >
+                </div>
+                <div class="md:col-span-1 flex items-end">
+                  <button
+                    type="button"
+                    @click="removeRenglon(index)"
+                    class="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <!-- Total presupuestado -->
+              <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-bold text-green-900">Total Presupuestado:</span>
+                  <span class="text-2xl font-black text-green-700">Q{{ formatMoney(calcularTotalPresupuesto()) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -318,10 +335,10 @@
             </button>
             <button
               type="submit"
-              :disabled="submitting || form.detalles.length === 0"
+              :disabled="submitting"
               class="px-6 py-3 bg-gradient-cfag text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
             >
-              {{ submitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Crear') }}
+              {{ submitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Crear Ejercicio') }}
             </button>
           </div>
         </form>
@@ -432,8 +449,8 @@
 
     <!-- Modal Crear Movimiento -->
     <div v-if="showMovimientoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
-        <div class="flex justify-between items-center mb-6">
+      <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 class="text-2xl font-black text-gray-900">Crear Movimiento Presupuestario</h3>
           <button @click="closeMovimientoModal" class="text-gray-500 hover:text-gray-700">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,53 +459,38 @@
           </button>
         </div>
 
-        <form @submit.prevent="crearMovimiento" class="space-y-6">
-          <!-- Información del ejercicio fiscal -->
-          <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
-            <div>
-              <label class="block text-sm font-bold text-gray-500 mb-1">Ejercicio Fiscal</label>
-              <p class="text-lg font-black text-primary-600">{{ movimientoForm.anio }}/{{ String(movimientoForm.mes).padStart(2, '0') }}</p>
+        <div class="overflow-y-auto max-h-[calc(90vh-140px)]">
+          <form @submit.prevent="crearMovimiento" class="p-6 space-y-6">
+          <!-- Información del presupuesto -->
+          <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-bold text-blue-700 mb-1">Ejercicio Fiscal</label>
+                <p class="text-xl font-black text-blue-900">{{ movimientoForm.anio }}/{{ String(movimientoForm.mes).padStart(2, '0') }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-blue-700 mb-1">Descripción</label>
+                <p class="text-sm text-blue-800">{{ presupuestoSeleccionado?.descripcion || 'Cargando...' }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-blue-700 mb-1">Total Presupuesto</label>
+                <p class="text-lg font-black text-green-700">Q{{ formatMoney(calcularMontoTotal(presupuestoSeleccionado)) }}</p>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-bold text-gray-500 mb-1">Tipo de Movimiento</label>
-              <select
-                v-model="movimientoForm.tipo"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="gasto">Gasto</option>
-                <option value="compromiso">Compromiso</option>
-                <option value="devengado">Devengado</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Renglón *</label>
-            <select
-              v-model="movimientoForm.renglon_id"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-            >
-              <option value="">Seleccionar renglón</option>
-              <option v-for="renglon in renglones" :key="renglon.id" :value="renglon.id">
-                {{ renglon.codigo }} - {{ renglon.nombre }}
-              </option>
-            </select>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">Monto *</label>
-              <input
-                v-model="movimientoForm.monto"
-                type="number"
-                step="0.01"
-                min="0.01"
+              <label class="block text-sm font-bold text-gray-700 mb-2">Tipo de Movimiento *</label>
+              <select
+                v-model="movimientoForm.tipo"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                placeholder="0.00"
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
               >
+                <option value="ejecucion_presupuestaria">💰 Ejecución Presupuestaria</option>
+                <option value="ajuste">⚖️ Ajuste</option>
+                <option value="traslado">🔄 Traslado</option>
+              </select>
             </div>
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-2">Fecha *</label>
@@ -498,6 +500,66 @@
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
               >
+            </div>
+          </div>
+
+          <!-- Selección de renglón del presupuesto -->
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">Renglón del Presupuesto *</label>
+            <div v-if="!presupuestoSeleccionado?.detalles || presupuestoSeleccionado.detalles.length === 0" class="text-center py-4 text-gray-500">
+              <p>Cargando renglones del presupuesto...</p>
+            </div>
+            <div v-else class="space-y-2">
+              <div 
+                v-for="detalle in presupuestoSeleccionado.detalles" 
+                :key="detalle.id"
+                :class="[
+                  'border rounded-lg p-3 cursor-pointer transition-all',
+                  movimientoForm.renglon_id === detalle.renglon_id 
+                    ? 'border-primary-500 bg-primary-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                ]"
+                @click="seleccionarRenglon(detalle)"
+              >
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="flex items-center mb-1">
+                      <input 
+                        type="radio" 
+                        :value="detalle.renglon_id" 
+                        v-model="movimientoForm.renglon_id"
+                        class="mr-2"
+                      >
+                      <span class="font-bold text-primary-600">{{ detalle.renglon?.codigo }}</span>
+                      <span class="ml-2 text-gray-900">{{ detalle.renglon?.nombre }}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 ml-6">{{ detalle.renglon?.grupo }}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-bold text-blue-600">Asignado: Q{{ formatMoney(detalle.monto_asignado) }}</div>
+                    <div class="text-sm font-bold text-green-600">Disponible: Q{{ formatMoney(detalle.saldo_disponible || detalle.monto_asignado) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">Monto del Movimiento *</label>
+            <div class="relative">
+              <input
+                v-model="movimientoForm.monto"
+                type="number"
+                step="0.01"
+                min="0.01"
+                :max="getSaldoDisponible()"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+              >
+              <div v-if="getSaldoDisponible() > 0" class="mt-1 text-xs text-gray-500">
+                Saldo disponible: Q{{ formatMoney(getSaldoDisponible()) }}
+              </div>
             </div>
           </div>
 
@@ -522,23 +584,24 @@
             >
           </div>
 
-          <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              @click="closeMovimientoModal"
-              class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              :disabled="creandoMovimiento"
-              class="px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {{ creandoMovimiento ? 'Creando...' : 'Crear Movimiento' }}
-            </button>
-          </div>
-        </form>
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                @click="closeMovimientoModal"
+                class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="creandoMovimiento"
+                class="px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              >
+                {{ creandoMovimiento ? 'Creando...' : 'Crear Movimiento' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </AppLayout>
@@ -576,10 +639,12 @@ const deleting = ref(false)
 
 // Estado del modal de movimientos
 const showMovimientoModal = ref(false)
+const presupuestoSeleccionado = ref(null)
 const movimientoForm = ref({
+  presupuesto_id: null,
   anio: null,
   mes: null,
-  tipo: 'gasto',
+  tipo: 'ejecucion_presupuestaria',
   renglon_id: null,
   monto: 0,
   fecha: new Date().toISOString().split('T')[0],
@@ -593,7 +658,7 @@ const form = ref({
   anio: new Date().getFullYear(),
   mes: new Date().getMonth() + 1,
   descripcion: '',
-  detalles: []
+  renglones: []
 })
 
 // Alertas
@@ -695,25 +760,19 @@ const openCreateModal = () => {
     anio: new Date().getFullYear(),
     mes: new Date().getMonth() + 1,
     descripcion: '',
-    detalles: []
+    renglones: []
   }
   showModal.value = true
-  // Agregar un detalle por defecto
-  addDetalle()
 }
 
 // Abrir modal para editar
 const openEditModal = (presupuesto) => {
   isEditing.value = true
   form.value = {
+    id: presupuesto.id,
     anio: presupuesto.anio,
     mes: presupuesto.mes,
-    descripcion: presupuesto.descripcion,
-    detalles: presupuesto.detalles?.map(d => ({
-      id: d.id,
-      renglon_id: d.renglon_id,
-      monto_asignado: d.monto_asignado
-    })) || []
+    descripcion: presupuesto.descripcion
   }
   showModal.value = true
 }
@@ -738,30 +797,30 @@ const closeModal = () => {
     anio: new Date().getFullYear(),
     mes: new Date().getMonth() + 1,
     descripcion: '',
-    detalles: []
+    renglones: []
   }
 }
 
-// Agregar detalle
-const addDetalle = () => {
-  form.value.detalles.push({
+// Funciones para manejar renglones en el formulario
+const addRenglon = () => {
+  form.value.renglones.push({
     renglon_id: '',
     monto_asignado: 0,
     descripcion: ''
   })
 }
 
-// Eliminar detalle
-const removeDetalle = (index) => {
-  form.value.detalles.splice(index, 1)
+const removeRenglon = (index) => {
+  form.value.renglones.splice(index, 1)
 }
 
-// Calcular total
-const calculateTotal = () => {
-  return form.value.detalles.reduce((total, detalle) => {
-    return total + (parseFloat(detalle.monto_asignado) || 0)
+const calcularTotalPresupuesto = () => {
+  return form.value.renglones.reduce((total, renglon) => {
+    return total + (parseFloat(renglon.monto_asignado) || 0)
   }, 0)
 }
+
+
 
 // Calcular monto total del presupuesto (para compatibilidad)
 const calcularMontoTotal = (presupuesto) => {
@@ -784,23 +843,36 @@ const submitForm = async () => {
   try {
     submitting.value = true
     
+    // Validar que haya al menos un renglón
+    if (form.value.renglones.length === 0) {
+      showAlert('error', 'Debes agregar al menos un renglón con su monto presupuestado')
+      return
+    }
+
+    // Validar que todos los renglones tengan datos válidos
+    for (let i = 0; i < form.value.renglones.length; i++) {
+      const renglon = form.value.renglones[i]
+      if (!renglon.renglon_id) {
+        showAlert('error', `Selecciona un renglón en la posición ${i + 1}`)
+        return
+      }
+      if (!renglon.monto_asignado || renglon.monto_asignado <= 0) {
+        showAlert('error', `Ingresa un monto válido para el renglón en la posición ${i + 1}`)
+        return
+      }
+    }
+    
     const formData = {
       anio: form.value.anio,
       mes: form.value.mes,
       descripcion: form.value.descripcion,
-      renglones: form.value.detalles, // El backend espera 'renglones' no 'detalles'
+      renglones: form.value.renglones,
       usuario_id: 1 // Por ahora hardcodeado, luego usar auth
     }
 
-    if (isEditing.value) {
-      // Encontrar el presupuesto actual para obtener el ID
-      const presupuestoActual = presupuestos.value.find(p => 
-        p.anio == form.value.anio && p.mes == form.value.mes
-      )
-      if (presupuestoActual) {
-        await presupuestoService.update(presupuestoActual.id, formData)
-        showAlert('success', 'Presupuesto actualizado correctamente')
-      }
+    if (isEditing.value && form.value.id) {
+      await presupuestoService.update(form.value.id, formData)
+      showAlert('success', 'Presupuesto actualizado correctamente')
     } else {
       await presupuestoService.create(formData)
       showAlert('success', 'Presupuesto creado correctamente')
@@ -829,24 +901,36 @@ const clearFilters = () => {
 }
 
 // Abrir modal crear movimiento
-const openMovimientoModal = (presupuesto) => {
-  movimientoForm.value = {
-    anio: presupuesto.anio || new Date().getFullYear(),
-    mes: presupuesto.mes || new Date().getMonth() + 1,
-    tipo: 'gasto',
-    renglon_id: null,
-    monto: 0,
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: '',
-    referencia: ''
+const openMovimientoModal = async (presupuesto) => {
+  try {
+    // Cargar detalles completos del presupuesto
+    const response = await presupuestoService.getById(presupuesto.id)
+    presupuestoSeleccionado.value = response.data.data || response.data.presupuesto || response.data
+    
+    movimientoForm.value = {
+      presupuesto_id: presupuesto.id,
+      anio: presupuesto.anio || new Date().getFullYear(),
+      mes: presupuesto.mes || new Date().getMonth() + 1,
+      tipo: 'gasto',
+      renglon_id: null,
+      monto: 0,
+      fecha: new Date().toISOString().split('T')[0],
+      descripcion: '',
+      referencia: ''
+    }
+    showMovimientoModal.value = true
+  } catch (error) {
+    console.error('Error al cargar presupuesto:', error)
+    showAlert('error', 'Error al cargar los detalles del presupuesto')
   }
-  showMovimientoModal.value = true
 }
 
 // Cerrar modal crear movimiento
 const closeMovimientoModal = () => {
   showMovimientoModal.value = false
+  presupuestoSeleccionado.value = null
   movimientoForm.value = {
+    presupuesto_id: null,
     anio: null,
     mes: null,
     tipo: 'gasto',
@@ -858,10 +942,35 @@ const closeMovimientoModal = () => {
   }
 }
 
+// Seleccionar renglón del presupuesto
+const seleccionarRenglon = (detalle) => {
+  movimientoForm.value.renglon_id = detalle.renglon_id
+}
+
+// Obtener saldo disponible del renglón seleccionado
+const getSaldoDisponible = () => {
+  if (!movimientoForm.value.renglon_id || !presupuestoSeleccionado.value?.detalles) {
+    return 0
+  }
+  
+  const detalle = presupuestoSeleccionado.value.detalles.find(
+    d => d.renglon_id === movimientoForm.value.renglon_id
+  )
+  
+  return detalle ? (detalle.saldo_disponible || detalle.monto_asignado || 0) : 0
+}
+
 // Crear movimiento
 const crearMovimiento = async () => {
   try {
     creandoMovimiento.value = true
+    
+    // Validar que el monto no exceda el saldo disponible
+    const saldoDisponible = getSaldoDisponible()
+    if (movimientoForm.value.monto > saldoDisponible) {
+      showAlert('error', `El monto no puede exceder el saldo disponible (Q${formatMoney(saldoDisponible)})`)
+      return
+    }
     
     // Importar el servicio de movimientos
     const movimientoService = (await import('@/services/movimientoService')).default
@@ -873,11 +982,8 @@ const crearMovimiento = async () => {
       descripcion: movimientoForm.value.descripcion,
       referencia: movimientoForm.value.referencia,
       fecha: movimientoForm.value.fecha,
-      renglones: [{
-        renglon_id: movimientoForm.value.renglon_id,
-        monto: movimientoForm.value.monto,
-        descripcion: movimientoForm.value.descripcion
-      }]
+      renglon_id: movimientoForm.value.renglon_id,
+      monto: movimientoForm.value.monto
     }
     
     await movimientoService.create(movimientoData)

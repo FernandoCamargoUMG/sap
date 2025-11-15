@@ -147,26 +147,12 @@ class PresupuestoController extends Controller
                 'estado' => 1
             ]);
 
-            // Crear detalles con validación de saldos
+            // Crear detalles del presupuesto con montos asignados
             foreach ($request->renglones as $renglonData) {
-                $renglon = Renglon::find($renglonData['renglon_id']);
-                
-                // Verificar que el renglón tenga saldo disponible
-                $yaAsignado = PresupuestoDet::whereHas('presupuestoCab', function($q) use ($request) {
-                    $q->where('anio', $request->anio);
-                })->where('renglon_id', $renglon->id)->sum('monto_asignado');
-                
-                $disponible = $renglon->monto_inicial - $yaAsignado;
-                
-                if ($disponible < $renglonData['monto_asignado']) {
-                    throw new \Exception("El renglón {$renglon->codigo} solo tiene Q" . number_format($disponible, 2) . " disponibles");
-                }
-
                 PresupuestoDet::create([
                     'presupuesto_id' => $presupuesto->id,
                     'renglon_id' => $renglonData['renglon_id'],
                     'monto_asignado' => $renglonData['monto_asignado'],
-                    'monto_ejecutado' => 0,
                     'descripcion' => $renglonData['descripcion'] ?? null,
                     'estado' => 1
                 ]);
