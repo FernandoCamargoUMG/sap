@@ -158,4 +158,112 @@ class MovimientoController extends Controller
             ], 404);
         }
     }
+
+    /**
+     * Actualizar un movimiento existente
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'monto' => 'required|numeric|min:0.01',
+            'fecha' => 'required|date',
+            'descripcion' => 'required|string|max:255',
+            'referencia' => 'nullable|string|max:100'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $movimiento = MovimientoCab::with(['detalles.presupuestoDet'])->findOrFail($id);
+            
+            // Obtener el detalle (asumimos un solo detalle por movimiento)
+            $detalle = $movimiento->detalles->first();
+            
+            if (!$detalle) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró el detalle del movimiento'
+                ], 422);
+            }
+
+            // Si es ejecución presupuestaria y cambió el monto, validar saldo
+            if ($movimiento->tipo_movimiento === 'ejecucion_presupuestaria' && $detalle->monto != $request->monto) {
+                // Calcular saldo disponible sin contar este movimiento
+                $otrosMovimientos = MovimientoDet::where('presupuesto_det_id', $detalle->presupuesto_det_id)
+                    ->where('id', '!=', $detalle->id)
+                    ->where('estado', 1)
+                    ->sum('monto');
+                
+                $presupuestoDet = $detalle->presupuestoDet;
+                $saldoDisponible = $presupuestoDet->monto_asignado - $otrosMovimientos;
+                
+                if ($saldoDisponible < $request->monto) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Saldo insuficiente. Disponible: Q' . number_format($saldoDisponible, 2)
+                    ], 422);
+                }
+            }
+
+            // Actualizar movimiento
+            $movimiento->update([
+                'fecha' => $request->fecha,
+                'descripcion' => $request->descripcion,
+                'numero_documento' => $request->referencia,
+            ]);
+
+            // Actualizar detalle
+            $detalle->update([
+                'monto' => $request->monto,
+                'descripcion_detalle' => $request->descripcion,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Movimiento actualizado exitosamente',
+                'data' => $movimiento->load(['detalles.renglon'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar movimiento: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un movimiento (soft delete)
+     */
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $movimiento = MovimientoCab::with(['detalles'])->findOrFail($id);
+
+            // Marcar como eliminado (soft delete)
+            $movimiento->update(['estado' => 0]);
+            
+            // También marcar los detalles como eliminados
+            foreach ($movimiento->detalles as $detalle) {
+                $detalle->update(['estado' => 0]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Movimiento eliminado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar movimiento: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

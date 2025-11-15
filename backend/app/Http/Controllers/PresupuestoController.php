@@ -180,19 +180,48 @@ class PresupuestoController extends Controller
      */
     public function show($id)
     {
-        $presupuesto = PresupuestoCab::with(['usuario', 'detalles.renglon'])->find($id);
+        try {
+            $presupuesto = PresupuestoCab::with([
+                'usuario', 
+                'detalles.renglon',
+                'detalles.movimientos' => function($query) {
+                    $query->where('estado', 1)->orderBy('created_at', 'desc');
+                }
+            ])->find($id);
 
-        if (!$presupuesto) {
+            if (!$presupuesto) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Presupuesto no encontrado'
+                ], 404);
+            }
+
+            // Agregar información calculada de movimientos para cada detalle
+            $presupuesto->detalles->map(function($detalle) {
+                $montoEjecutado = $detalle->movimientos->sum('monto');
+                $detalle->monto_ejecutado = $montoEjecutado;
+                $detalle->saldo_disponible = $detalle->monto_asignado - $montoEjecutado;
+                
+                // Formatear movimientos para la UI
+                $detalle->movimientos->map(function($movimientoDet) {
+                    $movimientoDet->movimiento_cab = $movimientoDet->movimiento;
+                    return $movimientoDet;
+                });
+                
+                return $detalle;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $presupuesto
+            ], 200);
+            
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Presupuesto no encontrado'
-            ], 404);
+                'message' => 'Error al obtener presupuesto: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $presupuesto
-        ], 200);
     }
 
     /**
@@ -232,19 +261,39 @@ class PresupuestoController extends Controller
 
             // Actualizar detalles si se enviaron
             if ($request->has('renglones')) {
-                // Eliminar detalles actuales
-                $presupuesto->detalles()->delete();
+                // Obtener detalles existentes
+                $detallesExistentes = $presupuesto->detalles()->get()->keyBy('renglon_id');
+                $renglonesEnviados = collect($request->renglones)->keyBy('renglon_id');
 
-                // Crear nuevos detalles
+                // Actualizar o crear detalles
                 foreach ($request->renglones as $detalle) {
-                    PresupuestoDet::create([
-                        'presupuesto_id' => $presupuesto->id,
-                        'renglon_id' => $detalle['renglon_id'],
-                        'monto_asignado' => $detalle['monto_asignado'] ?? 0,
-                        'monto_ejecutado' => 0,
-                        'descripcion' => $detalle['descripcion'] ?? null,
-                        'estado' => 1
-                    ]);
+                    $detalleExistente = $detallesExistentes->get($detalle['renglon_id']);
+                    
+                    if ($detalleExistente) {
+                        // Actualizar existente manteniendo monto_ejecutado
+                        $detalleExistente->update([
+                            'monto_asignado' => $detalle['monto_asignado'] ?? 0,
+                            'descripcion' => $detalle['descripcion'] ?? null,
+                        ]);
+                    } else {
+                        // Crear nuevo detalle
+                        PresupuestoDet::create([
+                            'presupuesto_id' => $presupuesto->id,
+                            'renglon_id' => $detalle['renglon_id'],
+                            'monto_asignado' => $detalle['monto_asignado'] ?? 0,
+                            'monto_ejecutado' => 0,
+                            'descripcion' => $detalle['descripcion'] ?? null,
+                            'estado' => 1
+                        ]);
+                    }
+                }
+
+                // Eliminar detalles que ya no están en la request (soft delete)
+                $renglonesAEliminar = $detallesExistentes->keys()->diff($renglonesEnviados->keys());
+                if ($renglonesAEliminar->isNotEmpty()) {
+                    $presupuesto->detalles()
+                        ->whereIn('renglon_id', $renglonesAEliminar)
+                        ->update(['estado' => 0]); // Soft delete
                 }
             }
 

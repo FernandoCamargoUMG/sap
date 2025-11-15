@@ -85,6 +85,8 @@ Route::middleware('web')->group(function () {
         Route::post('/', [MovimientoController::class, 'store'])->name('movimientos.store');
         Route::get('/resumen', [MovimientoController::class, 'resumen'])->name('movimientos.resumen');
         Route::get('/{id}', [MovimientoController::class, 'show'])->name('movimientos.show');
+        Route::put('/{id}', [MovimientoController::class, 'update'])->name('movimientos.update');
+        Route::delete('/{id}', [MovimientoController::class, 'destroy'])->name('movimientos.destroy');
         Route::put('/{id}/anular', [MovimientoController::class, 'anular'])->name('movimientos.anular');
     });
 

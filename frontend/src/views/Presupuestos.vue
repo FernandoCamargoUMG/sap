@@ -457,6 +457,84 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Sección de Movimientos -->
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-bold text-gray-900">Movimientos Ejecutados</h4>
+                            <button 
+                                @click="loadMovimientos(selectedPresupuesto.id)"
+                                class="text-primary-600 hover:text-primary-700 text-sm font-semibold"
+                            >
+                                🔄 Actualizar
+                            </button>
+                        </div>
+                        
+                        <div v-if="movimientosPresupuesto.length === 0" class="text-center py-8 text-gray-500">
+                            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <p>No se han registrado movimientos para este presupuesto</p>
+                        </div>
+
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Tipo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Renglón</th>
+                                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Monto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Descripción</th>
+                                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="movimiento in movimientosPresupuesto" :key="movimiento.id" class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ formatDate(movimiento.fecha) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                {{ movimiento.tipo_movimiento || 'Ejecución' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ movimiento.renglon }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-red-600">
+                                            Q{{ formatMoney(movimiento.monto) }}
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                                            {{ movimiento.descripcion }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                            <div class="flex justify-center space-x-2">
+                                                <button 
+                                                    @click="editarMovimiento(movimiento)"
+                                                    class="text-blue-600 hover:text-blue-900 p-1 rounded"
+                                                    title="Editar movimiento"
+                                                >
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                                <button 
+                                                    @click="confirmarEliminarMovimiento(movimiento)"
+                                                    class="text-red-600 hover:text-red-900 p-1 rounded"
+                                                    title="Eliminar movimiento"
+                                                >
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -487,6 +565,114 @@
                         <button @click="deletePresupuesto" :disabled="deleting"
                             class="px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors">
                             {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Editar Movimiento -->
+        <div v-if="showEditMovimientoModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-black text-gray-900">Editar Movimiento</h3>
+                    <button @click="showEditMovimientoModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form @submit.prevent="guardarMovimientoEditado" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Fecha *</label>
+                        <input 
+                            v-model="editMovimientoForm.fecha" 
+                            type="date" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Monto *</label>
+                        <input 
+                            v-model="editMovimientoForm.monto" 
+                            type="number" 
+                            step="0.01" 
+                            min="0.01" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Descripción *</label>
+                        <textarea 
+                            v-model="editMovimientoForm.descripcion" 
+                            rows="3" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Descripción del movimiento..."
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Referencia</label>
+                        <input 
+                            v-model="editMovimientoForm.referencia" 
+                            type="text" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Número de factura, orden de compra, etc."
+                        />
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button 
+                            type="button" 
+                            @click="showEditMovimientoModal = false"
+                            class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-6 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-colors"
+                        >
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Confirmar Eliminación de Movimiento -->
+        <div v-if="showDeleteMovimientoModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                <div class="text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+                        <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.733-2.755L13.382 4.224a2.25 2.25 0 00-3.764 0L2.349 15.245C1.581 16.833 2.54 18.5 4.08 18.5z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-black text-gray-900 mb-3">Confirmar Eliminación</h3>
+                    <p class="text-gray-600 mb-6">
+                        ¿Estás seguro de que deseas eliminar este movimiento por <strong>Q{{
+                            formatMoney(movimientoToDelete?.monto) }}</strong>?
+                        <br><br>
+                        <span class="text-sm text-red-600">⚠️ Esta acción no se puede deshacer</span>
+                    </p>
+                    <div class="flex justify-center space-x-3">
+                        <button @click="showDeleteMovimientoModal = false"
+                            class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button @click="eliminarMovimiento"
+                            class="px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors">
+                            Eliminar Movimiento
                         </button>
                     </div>
                 </div>
@@ -576,7 +762,7 @@
                                             <div class="text-sm font-bold text-blue-600">Asignado: Q{{
                                                 formatMoney(detalle.monto_asignado) }}</div>
                                             <div class="text-sm font-bold text-green-600">Disponible: Q{{
-                                                formatMoney(detalle.saldo_disponible || detalle.monto_asignado) }}</div>
+                                                formatMoney(calcularSaldoDetalle(detalle)) }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -685,6 +871,20 @@ const selectedPresupuesto = ref(null)
 const showDeleteModal = ref(false)
 const presupuestoToDelete = ref(null)
 const deleting = ref(false)
+
+// Variables para gestión de movimientos
+const movimientosPresupuesto = ref([])
+const showEditMovimientoModal = ref(false)
+const showDeleteMovimientoModal = ref(false)
+const movimientoToEdit = ref(null)
+const movimientoToDelete = ref(null)
+const editMovimientoForm = ref({
+    id: null,
+    fecha: '',
+    monto: 0,
+    descripcion: '',
+    referencia: ''
+})
 
 // Estado del modal de movimientos
 const showMovimientoModal = ref(false)
@@ -830,6 +1030,10 @@ const viewDetails = async (presupuesto) => {
     try {
         const response = await presupuestoService.getById(presupuesto.id)
         selectedPresupuesto.value = response.data.data || response.data.presupuesto || response.data
+        
+        // Cargar movimientos del presupuesto
+        await loadMovimientos(presupuesto.id)
+        
         showDetailsModal.value = true
     } catch (error) {
         console.error('Error al cargar detalles:', error)
@@ -961,6 +1165,20 @@ const openMovimientoModal = async (presupuesto) => {
         // Cargar detalles completos del presupuesto
         const response = await presupuestoService.getById(presupuesto.id)
         presupuestoSeleccionado.value = response.data.data || response.data.presupuesto || response.data
+        
+        // Debug: verificar datos recibidos
+        console.log('Datos del presupuesto para modal movimiento:', presupuestoSeleccionado.value)
+        if (presupuestoSeleccionado.value?.detalles) {
+            presupuestoSeleccionado.value.detalles.forEach((detalle, index) => {
+                console.log(`Detalle ${index}:`, {
+                    id: detalle.id,
+                    renglon_id: detalle.renglon_id,
+                    monto_asignado: detalle.monto_asignado,
+                    monto_ejecutado: detalle.monto_ejecutado,
+                    saldo_disponible: detalle.saldo_disponible
+                })
+            })
+        }
 
         movimientoForm.value = {
             presupuesto_id: presupuesto.id,
@@ -1003,6 +1221,21 @@ const seleccionarRenglon = (detalle) => {
     movimientoForm.value.renglon_id = detalle.renglon_id
 }
 
+// Calcular saldo disponible de un detalle
+const calcularSaldoDetalle = (detalle) => {
+    if (!detalle) return 0
+    
+    // Usar saldo_disponible si existe, sino calcular manualmente
+    if (detalle.saldo_disponible !== undefined && detalle.saldo_disponible !== null) {
+        return parseFloat(detalle.saldo_disponible)
+    }
+    
+    // Calcular manualmente si no viene el saldo_disponible
+    const asignado = parseFloat(detalle.monto_asignado || 0)
+    const ejecutado = parseFloat(detalle.monto_ejecutado || 0)
+    return Math.max(0, asignado - ejecutado)
+}
+
 // Obtener saldo disponible del renglón seleccionado
 const getSaldoDisponible = () => {
     if (!movimientoForm.value.renglon_id || !presupuestoSeleccionado.value?.detalles) {
@@ -1013,7 +1246,20 @@ const getSaldoDisponible = () => {
         d => d.renglon_id === movimientoForm.value.renglon_id
     )
 
-    return detalle ? (detalle.saldo_disponible || detalle.monto_asignado || 0) : 0
+    if (detalle) {
+        const saldo = calcularSaldoDetalle(detalle)
+        console.log('Calculando saldo disponible:', {
+            renglon_id: detalle.renglon_id,
+            monto_asignado: detalle.monto_asignado,
+            monto_ejecutado: detalle.monto_ejecutado,
+            saldo_disponible: detalle.saldo_disponible,
+            calculo_manual: detalle.monto_asignado - (detalle.monto_ejecutado || 0),
+            resultado_final: saldo
+        })
+        return saldo
+    }
+
+    return 0
 }
 
 // Crear movimiento
@@ -1099,6 +1345,118 @@ const showAlert = (type, message) => {
     setTimeout(() => {
         alert.value.show = false
     }, 5000)
+}
+
+// ========== GESTIÓN DE MOVIMIENTOS ==========
+
+// Cargar movimientos de un presupuesto
+const loadMovimientos = async (presupuestoId) => {
+    try {
+        // Los movimientos ya vienen en los detalles del presupuesto
+        if (selectedPresupuesto.value && selectedPresupuesto.value.detalles) {
+            console.log('Detalles del presupuesto:', selectedPresupuesto.value.detalles)
+            const movimientos = []
+            selectedPresupuesto.value.detalles.forEach(detalle => {
+                console.log('Detalle:', detalle)
+                console.log('Renglón del detalle:', detalle.renglon)
+                if (detalle.movimientos && detalle.movimientos.length > 0) {
+                    detalle.movimientos.forEach(movimiento => {
+                        // Agregar información del detalle y renglón al movimiento
+                        movimientos.push({
+                            id: movimiento.id,
+                            fecha: movimiento.movimiento_cab?.fecha || movimiento.created_at,
+                            tipo: movimiento.movimiento_cab?.tipo_movimiento || 'ejecucion_presupuestaria',
+                            renglon: detalle.renglon ? `${detalle.renglon.codigo} - ${detalle.renglon.nombre}` : `Renglón ${detalle.renglon_id}`,
+                            monto: parseFloat(movimiento.monto),
+                            descripcion: movimiento.descripcion_detalle || movimiento.movimiento_cab?.descripcion,
+                            referencia: movimiento.movimiento_cab?.numero_documento || '',
+                            movimiento_det_id: movimiento.id,
+                            movimiento_cab_id: movimiento.movimiento_id,
+                            renglon_id: detalle.renglon_id,
+                            presupuesto_det_id: detalle.id
+                        })
+                    })
+                }
+            })
+            movimientosPresupuesto.value = movimientos
+        } else {
+            movimientosPresupuesto.value = []
+        }
+    } catch (error) {
+        console.error('Error al cargar movimientos:', error)
+        movimientosPresupuesto.value = []
+    }
+}
+
+// Editar movimiento
+const editarMovimiento = (movimiento) => {
+    console.log('Editando movimiento:', movimiento)
+    movimientoToEdit.value = movimiento
+    
+    // Formatear fecha para input de tipo date
+    let fechaFormateada = ''
+    if (movimiento.fecha) {
+        const fecha = new Date(movimiento.fecha)
+        fechaFormateada = fecha.toISOString().split('T')[0]
+    }
+    
+    editMovimientoForm.value = {
+        id: movimiento.movimiento_cab_id || movimiento.id,
+        fecha: fechaFormateada,
+        monto: parseFloat(movimiento.monto || 0),
+        descripcion: movimiento.descripcion || '',
+        referencia: movimiento.referencia || ''
+    }
+    showEditMovimientoModal.value = true
+}
+
+// Confirmar eliminación de movimiento
+const confirmarEliminarMovimiento = (movimiento) => {
+    movimientoToDelete.value = movimiento
+    showDeleteMovimientoModal.value = true
+}
+
+// Guardar cambios del movimiento editado
+const guardarMovimientoEditado = async () => {
+    try {
+        const movimientoService = (await import('@/services/movimientoService')).default
+        
+        await movimientoService.update(editMovimientoForm.value.id, {
+            fecha: editMovimientoForm.value.fecha,
+            monto: editMovimientoForm.value.monto,
+            descripcion: editMovimientoForm.value.descripcion,
+            referencia: editMovimientoForm.value.referencia
+        })
+
+        showAlert('success', 'Movimiento actualizado correctamente')
+        showEditMovimientoModal.value = false
+        
+        // Recargar los detalles del presupuesto para obtener movimientos actualizados
+        await viewDetails(selectedPresupuesto.value)
+        await loadPresupuestos() // Actualizar los totales
+    } catch (error) {
+        console.error('Error al actualizar movimiento:', error)
+        showAlert('error', error.response?.data?.message || 'Error al actualizar movimiento')
+    }
+}
+
+// Eliminar movimiento
+const eliminarMovimiento = async () => {
+    try {
+        const movimientoService = (await import('@/services/movimientoService')).default
+        
+        await movimientoService.delete(movimientoToDelete.value.movimiento_cab_id || movimientoToDelete.value.id)
+
+        showAlert('success', 'Movimiento eliminado correctamente')
+        showDeleteMovimientoModal.value = false
+        
+        // Recargar los detalles del presupuesto para obtener movimientos actualizados
+        await viewDetails(selectedPresupuesto.value)
+        await loadPresupuestos() // Actualizar los totales
+    } catch (error) {
+        console.error('Error al eliminar movimiento:', error)
+        showAlert('error', error.response?.data?.message || 'Error al eliminar movimiento')
+    }
 }
 
 // Utilidades
