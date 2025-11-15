@@ -1354,11 +1354,8 @@ const loadMovimientos = async (presupuestoId) => {
     try {
         // Los movimientos ya vienen en los detalles del presupuesto
         if (selectedPresupuesto.value && selectedPresupuesto.value.detalles) {
-            console.log('Detalles del presupuesto:', selectedPresupuesto.value.detalles)
             const movimientos = []
             selectedPresupuesto.value.detalles.forEach(detalle => {
-                console.log('Detalle:', detalle)
-                console.log('Renglón del detalle:', detalle.renglon)
                 if (detalle.movimientos && detalle.movimientos.length > 0) {
                     detalle.movimientos.forEach(movimiento => {
                         // Agregar información del detalle y renglón al movimiento
@@ -1390,7 +1387,6 @@ const loadMovimientos = async (presupuestoId) => {
 
 // Editar movimiento
 const editarMovimiento = (movimiento) => {
-    console.log('Editando movimiento:', movimiento)
     movimientoToEdit.value = movimiento
     
     // Formatear fecha para input de tipo date
