@@ -25,7 +25,7 @@ class Usuario extends Model
     ];
 
     protected $casts = [
-        'estado' => 'boolean',
+        'estado' => 'integer',
     ];
 
     // Scope para obtener solo usuarios activos

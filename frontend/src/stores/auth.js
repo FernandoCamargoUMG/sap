@@ -11,7 +11,13 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const isAuthenticated = computed(() => !!usuario.value)
   const nombreUsuario = computed(() => usuario.value?.nombre || '')
-  const rolUsuario = computed(() => usuario.value?.rol?.nombre || '')
+  const rolUsuario = computed(() => {
+    if (!usuario.value) return ''
+    // Manejar tanto rol como string directo, como objeto con nombre
+    return typeof usuario.value.rol === 'string' 
+      ? usuario.value.rol 
+      : usuario.value?.rol?.nombre || ''
+  })
 
   // Actions
   async function login(correo, password) {

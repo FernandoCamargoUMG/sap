@@ -10,13 +10,11 @@ use Illuminate\Http\Request;
 class UsuarioController extends Controller
 {
     /**
-     * Listar todos los usuarios activos
+     * Listar todos los usuarios (activos e inactivos)
      */
     public function index()
     {
         $usuarios = Usuario::with('rol')
-            ->where('estado', 1)
-            ->whereNull('deleted_at')
             ->orderBy('nombre')
             ->get();
 
@@ -113,7 +111,7 @@ class UsuarioController extends Controller
     }
 
     /**
-     * Soft delete - Eliminar usuario (lógico)
+     * Desactivar usuario (cambiar estado a inactivo)
      */
     public function destroy($id)
     {
@@ -126,24 +124,75 @@ class UsuarioController extends Controller
             ], 404);
         }
 
+        // Cambiar estado a inactivo en lugar de eliminar
         $usuario->estado = 0;
         $usuario->save();
-        $usuario->delete(); // Soft delete
 
         // Registrar en bitácora (solo si hay sesión activa)
         if (session('usuario_id')) {
             Bitacora::registrar(
                 'usuarios',
                 $usuario->id,
-                'eliminado',
+                'desactivado',
                 session('usuario_id'),
-                "Usuario {$usuario->nombre} eliminado"
+                "Usuario {$usuario->nombre} desactivado"
             );
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Usuario eliminado exitosamente'
+            'message' => 'Usuario desactivado exitosamente'
+        ], 200);
+    }
+
+    /**
+     * Activar usuario (cambiar estado a activo)
+     */
+    public function activate($id)
+    {
+        $usuario = Usuario::find($id);
+
+        if (!$usuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        // Cambiar estado a activo
+        $usuario->estado = 1;
+        $usuario->save();
+
+        // Registrar en bitácora (solo si hay sesión activa)
+        if (session('usuario_id')) {
+            Bitacora::registrar(
+                'usuarios',
+                $usuario->id,
+                'activado',
+                session('usuario_id'),
+                "Usuario {$usuario->nombre} activado"
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Usuario activado exitosamente',
+            'data' => $usuario->load('rol')
+        ], 200);
+    }
+
+    /**
+     * Obtener todos los roles disponibles
+     */
+    public function getRoles()
+    {
+        $roles = \App\Models\Rol::where('estado', 1)
+            ->orderBy('nombre')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $roles
         ], 200);
     }
 

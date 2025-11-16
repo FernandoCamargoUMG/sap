@@ -12,6 +12,7 @@ use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\IntraController;
 use App\Http\Controllers\CurController;
 use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\ActaBajaCuantiaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,12 +29,18 @@ Route::prefix('auth')->group(function () {
 });
 
 // Rutas protegidas (requieren sesión activa)
-Route::middleware('web')->group(function () {
+Route::middleware('api')->group(function () {
     
     // ========== AUTENTICACIÓN ==========
     Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('me', [AuthController::class, 'me'])->name('auth.me');
+    });
+
+    // ========== DASHBOARD ==========
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/estadisticas', [\App\Http\Controllers\DashboardController::class, 'getEstadisticas'])->name('dashboard.estadisticas');
+        Route::get('/actividad-reciente', [\App\Http\Controllers\DashboardController::class, 'getActividadReciente'])->name('dashboard.actividad');
     });
 
     // ========== MÓDULO DE SEGURIDAD ==========
@@ -42,11 +49,11 @@ Route::middleware('web')->group(function () {
     Route::prefix('usuarios')->group(function () {
         Route::get('/', [UsuarioController::class, 'index'])->name('usuarios.index');
         Route::post('/', [UsuarioController::class, 'store'])->name('usuarios.store');
-        Route::get('/deleted/list', [UsuarioController::class, 'deleted'])->name('usuarios.deleted');
+        Route::get('/roles', [UsuarioController::class, 'getRoles'])->name('usuarios.roles');
         Route::get('/{id}', [UsuarioController::class, 'show'])->name('usuarios.show');
         Route::put('/{id}', [UsuarioController::class, 'update'])->name('usuarios.update');
         Route::delete('/{id}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
-        Route::post('/{id}/restore', [UsuarioController::class, 'restore'])->name('usuarios.restore');
+        Route::post('/{id}/activate', [UsuarioController::class, 'activate'])->name('usuarios.activate');
     });
 
     // ========== MÓDULO PRESUPUESTARIO ==========
@@ -142,6 +149,19 @@ Route::middleware('web')->group(function () {
         Route::delete('/{id}/documento', [CurController::class, 'deleteDocument'])->name('cur.deleteDocument');
         Route::post('/{id}/documentos', [CurController::class, 'addDocuments'])->name('cur.addDocuments');
         Route::delete('/{id}', [CurController::class, 'destroy'])->name('cur.destroy');
+    });
+
+    // Actas de Baja Cuantía
+    Route::prefix('actas-baja-cuantia')->group(function () {
+        Route::get('/', [ActaBajaCuantiaController::class, 'index'])->name('actas-baja-cuantia.index');
+        Route::post('/', [ActaBajaCuantiaController::class, 'store'])->name('actas-baja-cuantia.store');
+        Route::get('/proveedores', [ActaBajaCuantiaController::class, 'getProveedores'])->name('actas-baja-cuantia.proveedores');
+        Route::get('/{id}', [ActaBajaCuantiaController::class, 'show'])->name('actas-baja-cuantia.show');
+        Route::put('/{id}', [ActaBajaCuantiaController::class, 'update'])->name('actas-baja-cuantia.update');
+        Route::delete('/{id}', [ActaBajaCuantiaController::class, 'destroy'])->name('actas-baja-cuantia.destroy');
+        Route::post('/{id}/documento', [ActaBajaCuantiaController::class, 'uploadDocument'])->name('actas-baja-cuantia.uploadDocument');
+        Route::get('/documento/{documentoId}', [ActaBajaCuantiaController::class, 'downloadDocument'])->name('actas-baja-cuantia.downloadDocument');
+        Route::delete('/documento/{documentoId}', [ActaBajaCuantiaController::class, 'deleteDocument'])->name('actas-baja-cuantia.deleteDocument');
     });
 
     // Documentos adjuntos

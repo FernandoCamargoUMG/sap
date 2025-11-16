@@ -20,7 +20,7 @@ class UsuarioRequest extends FormRequest
      */
     public function rules(): array
     {
-        $usuarioId = $this->route('usuario'); // Para update
+        $usuarioId = $this->route('id'); // Para update - parámetro de la ruta
 
         $rules = [
             'nombre' => 'required|string|max:100',
@@ -31,7 +31,7 @@ class UsuarioRequest extends FormRequest
                 Rule::unique('usuarios', 'correo')->ignore($usuarioId)->whereNull('deleted_at')
             ],
             'rol_id' => 'required|exists:roles,id',
-            'estado' => 'sometimes|boolean',
+            'estado' => 'sometimes|integer|in:0,1',
         ];
 
         // Contraseña solo requerida en creación

@@ -30,34 +30,23 @@ export default {
   },
 
   /**
-   * Eliminar usuario (soft delete)
+   * Desactivar usuario (cambiar estado a inactivo)
    */
   delete(id) {
     return apiClient.delete(`/usuarios/${id}`)
   },
 
   /**
-   * Restaurar usuario eliminado
+   * Activar usuario (cambiar estado a activo)
    */
-  restore(id) {
-    return apiClient.post(`/usuarios/${id}/restore`)
+  activate(id) {
+    return apiClient.post(`/usuarios/${id}/activate`)
   },
 
   /**
    * Obtener todos los roles disponibles
-   * TEMPORAL: Datos hardcodeados hasta que se implemente RolesController
    */
   getRoles() {
-    // TODO: Implementar endpoint GET /api/roles en el backend
-    console.warn('⚠️ Endpoint /roles no implementado, usando datos temporales')
-    return Promise.resolve({
-      data: {
-        roles: [
-          { id: 1, nombre: 'administrador', descripcion: 'Administrador del sistema' },
-          { id: 2, nombre: 'editor', descripcion: 'Editor con permisos de escritura' },
-          { id: 3, nombre: 'lector', descripcion: 'Solo lectura' }
-        ]
-      }
-    })
+    return apiClient.get('/usuarios/roles')
   }
 }

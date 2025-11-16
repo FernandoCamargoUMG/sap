@@ -119,12 +119,20 @@
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
                                         </button>
-                                        <button @click="confirmDelete(usuario)"
+                                        <button v-if="usuario.estado === 1" @click="confirmDeactivate(usuario)"
                                             class="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                            title="Eliminar">
+                                            title="Desactivar Usuario">
                                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                                            </svg>
+                                        </button>
+                                        <button v-else @click="confirmActivate(usuario)"
+                                            class="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                            title="Activar Usuario">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </button>
                                     </div>
@@ -203,7 +211,7 @@
                         </select>
                     </div>
 
-                    <!-- Estado -->
+                    <!-- Estado
                     <div v-if="isEditing">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Estado</label>
                         <select v-model="form.estado"
@@ -211,7 +219,7 @@
                             <option :value="1">Activo</option>
                             <option :value="0">Inactivo</option>
                         </select>
-                    </div>
+                    </div>-->
 
                     <!-- Botones -->
                     <div class="flex justify-end space-x-3 pt-6">
@@ -228,30 +236,47 @@
             </div>
         </div>
 
-        <!-- Modal Confirmar Eliminación -->
-        <div v-if="showDeleteModal"
+        <!-- Modal Confirmar Cambio de Estado -->
+        <div v-if="showStatusModal"
             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
                 <div class="text-center">
-                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
-                        <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div :class="[
+                        'mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-6',
+                        statusAction === 'deactivate' ? 'bg-red-100' : 'bg-green-100'
+                    ]">
+                        <svg v-if="statusAction === 'deactivate'" class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.733-2.755L13.382 4.224a2.25 2.25 0 00-3.764 0L2.349 15.245C1.581 16.833 2.54 18.5 4.08 18.5z" />
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                        </svg>
+                        <svg v-else class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-black text-gray-900 mb-3">Confirmar Eliminación</h3>
+                    <h3 class="text-2xl font-black text-gray-900 mb-3">
+                        {{ statusAction === 'deactivate' ? 'Confirmar Desactivación' : 'Confirmar Activación' }}
+                    </h3>
                     <p class="text-gray-600 mb-6">
-                        ¿Estás seguro de que deseas eliminar el usuario <strong>{{ userToDelete?.nombre }}</strong>?
-                        Esta acción se puede revertir posteriormente.
+                        ¿Estás seguro de que deseas {{ statusAction === 'deactivate' ? 'desactivar' : 'activar' }} 
+                        el usuario <strong>{{ userToChangeStatus?.nombre }}</strong>?
+                        <span v-if="statusAction === 'deactivate'" class="block mt-2 text-sm text-red-600">
+                            El usuario no podrá acceder al sistema mientras esté inactivo.
+                        </span>
                     </p>
                     <div class="flex justify-center space-x-3">
-                        <button @click="showDeleteModal = false"
+                        <button @click="showStatusModal = false"
                             class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
                             Cancelar
                         </button>
-                        <button @click="deleteUser" :disabled="deleting"
-                            class="px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors">
-                            {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+                        <button @click="changeUserStatus" :disabled="changingStatus"
+                            :class="[
+                                'px-6 py-3 rounded-xl font-semibold disabled:opacity-50 transition-colors',
+                                statusAction === 'deactivate' 
+                                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                            ]">
+                            {{ changingStatus ? 'Procesando...' : (statusAction === 'deactivate' ? 'Desactivar' : 'Activar') }}
                         </button>
                     </div>
                 </div>
@@ -275,13 +300,15 @@ const showModal = ref(false)
 const isEditing = ref(false)
 const submitting = ref(false)
 
-// Estado del modal de eliminación
-const showDeleteModal = ref(false)
-const userToDelete = ref(null)
-const deleting = ref(false)
+// Estado del modal de cambio de estado
+const showStatusModal = ref(false)
+const userToChangeStatus = ref(null)
+const statusAction = ref('') // 'activate' o 'deactivate'
+const changingStatus = ref(false)
 
 // Formulario
 const form = ref({
+    id: null,
     nombre: '',
     correo: '',
     contraseña: '',
@@ -309,7 +336,8 @@ const loadUsuarios = async () => {
     try {
         loading.value = true
         const response = await usuarioService.getAll()
-        usuarios.value = response.data.usuarios || response.data
+        console.log('Respuesta usuarios:', response.data)
+        usuarios.value = response.data.data || response.data
     } catch (error) {
         console.error('Error al cargar usuarios:', error)
         showAlert('error', 'Error al cargar usuarios')
@@ -322,34 +350,45 @@ const loadUsuarios = async () => {
 const loadRoles = async () => {
     try {
         const response = await usuarioService.getRoles()
-        roles.value = response.data.roles || response.data
+        roles.value = response.data.data || response.data || []
     } catch (error) {
         console.error('Error al cargar roles:', error)
+        showAlert('error', 'Error al cargar roles')
     }
 }
 
 // Abrir modal para crear
-const openCreateModal = () => {
+const openCreateModal = async () => {
     isEditing.value = false
     form.value = {
+        id: null,
         nombre: '',
         correo: '',
         contraseña: '',
         rol_id: '',
         estado: 1
     }
+    // Asegurar que los roles estén cargados
+    if (roles.value.length === 0) {
+        await loadRoles()
+    }
     showModal.value = true
 }
 
 // Abrir modal para editar
-const openEditModal = (usuario) => {
+const openEditModal = async (usuario) => {
     isEditing.value = true
     form.value = {
+        id: usuario.id,
         nombre: usuario.nombre,
         correo: usuario.correo,
         contraseña: '',
         rol_id: usuario.rol_id,
         estado: usuario.estado
+    }
+    // Asegurar que los roles estén cargados
+    if (roles.value.length === 0) {
+        await loadRoles()
     }
     showModal.value = true
 }
@@ -359,6 +398,7 @@ const closeModal = () => {
     showModal.value = false
     isEditing.value = false
     form.value = {
+        id: null,
         nombre: '',
         correo: '',
         contraseña: '',
@@ -380,12 +420,11 @@ const submitForm = async () => {
         }
 
         if (isEditing.value) {
-            // Encontrar el usuario que estamos editando
-            const usuarioActual = usuarios.value.find(u => u.rol_id === form.value.rol_id && u.correo === form.value.correo)
-            if (usuarioActual) {
-                await usuarioService.update(usuarioActual.id, formData)
-                showAlert('success', 'Usuario actualizado correctamente')
+            if (!form.value.id) {
+                throw new Error('ID del usuario no encontrado')
             }
+            await usuarioService.update(form.value.id, formData)
+            showAlert('success', 'Usuario actualizado correctamente')
         } else {
             await usuarioService.create(formData)
             showAlert('success', 'Usuario creado correctamente')
@@ -402,26 +441,45 @@ const submitForm = async () => {
     }
 }
 
-// Confirmar eliminación
-const confirmDelete = (usuario) => {
-    userToDelete.value = usuario
-    showDeleteModal.value = true
+// Confirmar desactivación
+const confirmDeactivate = (usuario) => {
+    userToChangeStatus.value = usuario
+    statusAction.value = 'deactivate'
+    showStatusModal.value = true
 }
 
-// Eliminar usuario
-const deleteUser = async () => {
+// Confirmar activación
+const confirmActivate = (usuario) => {
+    userToChangeStatus.value = usuario
+    statusAction.value = 'activate'
+    showStatusModal.value = true
+}
+
+// Cambiar estado del usuario
+const changeUserStatus = async () => {
     try {
-        deleting.value = true
-        await usuarioService.delete(userToDelete.value.id)
-        showAlert('success', 'Usuario eliminado correctamente')
-        showDeleteModal.value = false
-        userToDelete.value = null
+        changingStatus.value = true
+        
+        if (statusAction.value === 'deactivate') {
+            await usuarioService.delete(userToChangeStatus.value.id)
+            showAlert('success', 'Usuario desactivado correctamente')
+        } else {
+            await usuarioService.activate(userToChangeStatus.value.id)
+            showAlert('success', 'Usuario activado correctamente')
+        }
+        
+        showStatusModal.value = false
+        userToChangeStatus.value = null
+        statusAction.value = ''
         await loadUsuarios()
     } catch (error) {
-        console.error('Error al eliminar usuario:', error)
-        showAlert('error', 'Error al eliminar usuario')
+        console.error('Error al cambiar estado del usuario:', error)
+        const message = statusAction.value === 'deactivate' 
+            ? 'Error al desactivar usuario' 
+            : 'Error al activar usuario'
+        showAlert('error', message)
     } finally {
-        deleting.value = false
+        changingStatus.value = false
     }
 }
 
@@ -443,6 +501,7 @@ const getRoleBadgeClass = (roleName) => {
     if (!roleName) return 'bg-gray-100 text-gray-800'
 
     switch (roleName.toLowerCase()) {
+        case 'admin':
         case 'administrador':
             return 'bg-red-100 text-red-800'
         case 'contador':

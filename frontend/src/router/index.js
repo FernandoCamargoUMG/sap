@@ -86,6 +86,12 @@ const routes = [
     component: () => import('@/views/CUR.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/actas-baja-cuantia',
+    name: 'ActasBajaCuantia',
+    component: () => import('@/views/ActasBajaCuantia.vue'),
+    meta: { requiresAuth: true }
+  },
   // Administración
   {
     path: '/usuarios',
