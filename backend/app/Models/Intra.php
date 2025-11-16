@@ -12,11 +12,10 @@ class Intra extends Model
     protected $table = 'intras';
 
     protected $fillable = [
-        'numero_intra',
-        'renglon_origen_id',
-        'renglon_destino_id',
+        'renglon_origen',
+        'renglon_destino',
         'monto',
-        'fecha_transferencia',
+        'fecha',
         'justificacion',
         'usuario_id',
         'estado'
@@ -24,7 +23,7 @@ class Intra extends Model
 
     protected $casts = [
         'monto' => 'decimal:2',
-        'fecha_transferencia' => 'date',
+        'fecha' => 'datetime',
         'estado' => 'integer'
     ];
 
@@ -33,7 +32,7 @@ class Intra extends Model
      */
     public function renglonOrigen()
     {
-        return $this->belongsTo(Renglon::class, 'renglon_origen_id');
+        return $this->belongsTo(Renglon::class, 'renglon_origen');
     }
 
     /**
@@ -41,7 +40,7 @@ class Intra extends Model
      */
     public function renglonDestino()
     {
-        return $this->belongsTo(Renglon::class, 'renglon_destino_id');
+        return $this->belongsTo(Renglon::class, 'renglon_destino');
     }
 
     /**
@@ -69,27 +68,19 @@ class Intra extends Model
     }
 
     /**
-     * Al crear, afectar los renglones
+     * Obtener el presupuesto activo para un renglón en el año actual
      */
-    protected static function booted()
+    public static function getPresupuestoActivoPorRenglon($renglonId, $anio = null)
     {
-        static::created(function ($intra) {
-            // Restar del renglón origen
-            $intra->renglonOrigen->monto_asignado -= $intra->monto;
-            $intra->renglonOrigen->actualizarSaldo();
-
-            // Sumar al renglón destino
-            $intra->renglonDestino->monto_asignado += $intra->monto;
-            $intra->renglonDestino->actualizarSaldo();
-        });
-
-        static::deleted(function ($intra) {
-            // Revertir la transferencia
-            $intra->renglonOrigen->monto_asignado += $intra->monto;
-            $intra->renglonOrigen->actualizarSaldo();
-
-            $intra->renglonDestino->monto_asignado -= $intra->monto;
-            $intra->renglonDestino->actualizarSaldo();
-        });
+        $anio = $anio ?? date('Y');
+        
+        return PresupuestoDet::with(['presupuestoCab', 'renglon'])
+            ->whereHas('presupuestoCab', function($query) use ($anio) {
+                $query->where('anio', $anio)
+                      ->where('estado', 1);
+            })
+            ->where('renglon_id', $renglonId)
+            ->where('estado', 1)
+            ->first();
     }
 }

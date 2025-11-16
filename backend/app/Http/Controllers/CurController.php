@@ -146,6 +146,77 @@ class CurController extends Controller
     }
 
     /**
+     * Actualizar un compromiso existente
+     */
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'renglon_id' => 'required|exists:renglones,id',
+            'proveedor_id' => 'required|exists:proveedores,id',
+            'numero_cur' => 'required|string|max:50|unique:cur,numero_cur,' . $id,
+            'descripcion' => 'required|string|max:500',
+            'monto' => 'required|numeric|min:0.01',
+            'fecha_compromiso' => 'nullable|date'
+        ]);
+
+        DB::beginTransaction();
+        
+        try {
+            $cur = Cur::findOrFail($id);
+
+            // Verificar que el CUR esté activo
+            if ($cur->estado != 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede editar un compromiso anulado'
+                ], 400);
+            }
+
+            // Obtener información del renglón solo para el registro de bitácora
+            $renglon = Renglon::find($validated['renglon_id']);
+
+            // Actualizar compromiso
+            $cur->update([
+                'renglon_id' => $validated['renglon_id'],
+                'proveedor_id' => $validated['proveedor_id'],
+                'numero_cur' => $validated['numero_cur'],
+                'descripcion' => $validated['descripcion'],
+                'monto' => $validated['monto'],
+                'fecha_compromiso' => $validated['fecha_compromiso'] ?? $cur->fecha_compromiso
+            ]);
+
+            // Registrar en bitácora
+            if (Auth::id()) {
+                Bitacora::registrar(
+                    'cur',
+                    $cur->id,
+                    'actualizado',
+                    Auth::id(),
+                    "CUR {$cur->numero_cur} actualizado por monto {$cur->monto} en renglón {$renglon->codigo}"
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compromiso (CUR) actualizado exitosamente',
+                'data' => $cur->load(['renglon', 'proveedor', 'usuario', 'documento', 'documentos' => function ($query) {
+                    $query->where('estado', 1)->with('usuario')->orderBy('created_at', 'desc');
+                }])
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar compromiso: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Descargar documento del CUR (igual que facturas)
      */
     public function descargarDocumento($id)

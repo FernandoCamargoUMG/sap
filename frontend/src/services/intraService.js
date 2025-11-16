@@ -41,5 +41,43 @@ export default {
    */
   restore(id) {
     return apiClient.patch(`/intras/${id}/restore`)
+  },
+
+  /**
+   * Obtener renglones disponibles para transferencias
+   */
+  getRenglonesDisponibles(anio = null) {
+    const params = anio ? `?anio=${anio}` : ''
+    return apiClient.get(`/intras/renglones-disponibles${params}`)
+  },
+
+  /**
+   * Subir documento a una transferencia
+   */
+  uploadDocument(id, file) {
+    const formData = new FormData()
+    formData.append('documento', file)
+    
+    return apiClient.post(`/intras/${id}/documento`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+
+  /**
+   * Descargar documento de una transferencia
+   */
+  downloadDocument(documentoId) {
+    return apiClient.get(`/intras/documento/${documentoId}`, {
+      responseType: 'blob'
+    })
+  },
+
+  /**
+   * Eliminar documento de una transferencia
+   */
+  deleteDocument(documentoId) {
+    return apiClient.delete(`/intras/documento/${documentoId}`)
   }
 }

@@ -1,0 +1,5 @@
+Este es un documento de prueba para las transferencias INTRAS.
+
+Transferencia presupuestaria realizada entre renglones.
+
+Documento generado automáticamente para pruebas.

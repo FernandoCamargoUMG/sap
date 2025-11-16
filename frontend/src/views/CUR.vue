@@ -95,8 +95,8 @@
                                     Descripción</th>
                                 <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">
                                     Monto</th>
-                                <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">
-                                    Estado</th>
+                                <!--<th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">
+                                    Estado</th>-->
                                 <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">
                                     Acciones</th>
                             </tr>
@@ -138,14 +138,14 @@
                                     <span class="text-lg font-black text-orange-600">Q{{
                                         formatMoney(cur.monto) }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <!--<td class="px-6 py-4 text-center whitespace-nowrap">
                                     <span :class="[
                                         'px-3 py-1 rounded-full text-xs font-bold',
                                         cur.estado === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                     ]">
                                         {{ cur.estado === 1 ? 'Activo' : 'Anulado' }}
                                     </span>
-                                </td>
+                                </td>-->
                                 <td class="px-6 py-4 text-center whitespace-nowrap">
                                     <div class="flex items-center justify-center space-x-2">
                                         <button @click="viewDetails(cur)"
@@ -158,9 +158,17 @@
                                                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </button>
+                                        <button v-if="cur.estado === 1" @click="openEditModal(cur)"
+                                            class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                            title="Editar">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
                                         <button v-if="cur.estado === 1" @click="confirmAnular(cur)"
                                             class="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                            title="Anular">
+                                            title="Eliminar">
                                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
@@ -274,6 +282,85 @@
                         <button type="submit" :disabled="submitting"
                             class="px-6 py-3 bg-gradient-cfag text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all">
                             {{ submitting ? 'Procesando...' : 'Crear Compromiso' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Editar -->
+        <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-black text-gray-900">Editar Compromiso (CUR)</h3>
+                    <button @click="closeEditModal" class="text-gray-500 hover:text-gray-700">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form @submit.prevent="updateForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Fecha del Compromiso *</label>
+                            <input v-model="form.fecha_compromiso" type="date" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Número CUR</label>
+                            <input v-model="form.numero_cur" type="text"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
+                                placeholder="Ej: CUR-001-2025">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Proveedor *</label>
+                            <select v-model="form.proveedor_id" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500">
+                                <option value="">Seleccionar proveedor</option>
+                                <option v-for="proveedor in proveedores" :key="proveedor.id" :value="proveedor.id">
+                                    {{ proveedor.nombre }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Renglón *</label>
+                            <select v-model="form.renglon_id" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500">
+                                <option value="">Seleccionar renglón</option>
+                                <option v-for="renglon in renglones" :key="renglon.id" :value="renglon.id">
+                                    {{ renglon.codigo }} - {{ renglon.nombre }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Monto del Compromiso *</label>
+                        <input v-model="form.monto" type="number" step="0.01" min="0" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
+                            placeholder="0.00">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Descripción *</label>
+                        <textarea v-model="form.descripcion" required rows="3"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
+                            placeholder="Descripción del compromiso..."></textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                        <button type="button" @click="closeEditModal"
+                            class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="submit" :disabled="submitting"
+                            class="px-6 py-3 bg-gradient-cfag text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all">
+                            {{ submitting ? 'Actualizando...' : 'Actualizar Compromiso' }}
                         </button>
                     </div>
                 </form>
@@ -493,9 +580,12 @@ const filtroRenglon = ref('')
 
 // Estado del modal
 const showModal = ref(false)
+const showEditModal = ref(false)
 const submitting = ref(false)
 const showDetailsModal = ref(false)
 const selectedCur = ref(null)
+const editingCur = ref(null)
+const isEditing = ref(false)
 
 // Variables para archivo (singular como facturas)
 const selectedFile = ref(null)
@@ -606,6 +696,39 @@ const closeModal = () => {
     fileErrors.value = []
 }
 
+const openEditModal = (cur) => {
+    editingCur.value = cur
+    isEditing.value = true
+    
+    // Cargar datos del CUR en el formulario
+    form.value = {
+        fecha_compromiso: cur.fecha_compromiso.split('T')[0], // Convertir fecha ISO a formato de input date
+        numero_cur: cur.numero_cur,
+        proveedor_id: cur.proveedor_id,
+        renglon_id: cur.renglon_id,
+        monto: cur.monto,
+        descripcion: cur.descripcion
+    }
+    
+    showEditModal.value = true
+}
+
+const closeEditModal = () => {
+    showEditModal.value = false
+    editingCur.value = null
+    isEditing.value = false
+    
+    // Limpiar formulario
+    form.value = {
+        fecha_compromiso: new Date().toISOString().split('T')[0],
+        numero_cur: '',
+        proveedor_id: '',
+        renglon_id: '',
+        monto: 0,
+        descripcion: ''
+    }
+}
+
 const submitForm = async () => {
     try {
         submitting.value = true
@@ -639,6 +762,24 @@ const submitForm = async () => {
     }
 }
 
+const updateForm = async () => {
+    try {
+        submitting.value = true
+        
+        // Para edición, enviar como JSON (sin archivos)
+        await curService.update(editingCur.value.id, form.value)
+        
+        showAlert('success', 'Compromiso actualizado correctamente')
+        closeEditModal()
+        await loadCurs()
+    } catch (error) {
+        console.error('Error al actualizar compromiso:', error)
+        showAlert('error', error.response?.data?.message || 'Error al actualizar compromiso')
+    } finally {
+        submitting.value = false
+    }
+}
+
 const viewDetails = (cur) => {
     selectedCur.value = cur
     selectedDetailFile.value = null
@@ -647,7 +788,21 @@ const viewDetails = (cur) => {
 }
 
 const confirmAnular = (cur) => {
-    // Implementar confirmación de anulación
+    if (confirm(`¿Estás seguro de que quieres anular el CUR ${cur.numero_cur}? Esta acción no se puede deshacer.`)) {
+        anularCur(cur)
+    }
+}
+
+const anularCur = async (cur) => {
+    try {
+        await curService.delete(cur.id)
+        
+        showAlert('success', 'Compromiso anulado correctamente')
+        await loadCurs()
+    } catch (error) {
+        console.error('Error al anular compromiso:', error)
+        showAlert('error', error.response?.data?.message || 'Error al anular compromiso')
+    }
 }
 
 const filterByProveedor = () => {

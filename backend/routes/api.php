@@ -123,7 +123,11 @@ Route::middleware('web')->group(function () {
     Route::prefix('intras')->group(function () {
         Route::get('/', [IntraController::class, 'index'])->name('intras.index');
         Route::post('/', [IntraController::class, 'store'])->name('intras.store');
+        Route::get('/renglones-disponibles', [IntraController::class, 'getRenglonesDisponibles'])->name('intras.renglones');
         Route::get('/{id}', [IntraController::class, 'show'])->name('intras.show');
+        Route::post('/{id}/documento', [IntraController::class, 'uploadDocument'])->name('intras.uploadDocument');
+        Route::get('/documento/{documentoId}', [IntraController::class, 'downloadDocument'])->name('intras.downloadDocument');
+        Route::delete('/documento/{documentoId}', [IntraController::class, 'deleteDocument'])->name('intras.deleteDocument');
         Route::delete('/{id}', [IntraController::class, 'destroy'])->name('intras.destroy');
     });
 
@@ -132,6 +136,7 @@ Route::middleware('web')->group(function () {
         Route::get('/', [CurController::class, 'index'])->name('cur.index');
         Route::post('/', [CurController::class, 'store'])->name('cur.store');
         Route::get('/{id}', [CurController::class, 'show'])->name('cur.show');
+        Route::put('/{id}', [CurController::class, 'update'])->name('cur.update');
         Route::get('/{id}/documento', [CurController::class, 'descargarDocumento'])->name('cur.documento');
         Route::post('/{id}/documento', [CurController::class, 'uploadDocument'])->name('cur.uploadDocument');
         Route::delete('/{id}/documento', [CurController::class, 'deleteDocument'])->name('cur.deleteDocument');
